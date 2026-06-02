@@ -16,6 +16,13 @@
   flex: 1;
   overflow-y: auto;
   background: var(--bg);
+  /* Smooth scroll */
+  scroll-behavior: smooth;
+}
+
+/* Every direct child of app-main gets a page-enter animation */
+.app-main > * {
+  animation: pageEnter var(--t-page) both;
 }
 
 /* Mobile overlay when sidebar is open */
@@ -27,5 +34,11 @@
     background: rgba(0,0,0,0.5);
     z-index: 140;
     display: none;
+    animation: fadeIn 0.2s var(--ease-out);
   }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

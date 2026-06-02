@@ -9,6 +9,7 @@
   --border2:     rgba(255,255,255,0.14);
   --green:       #1D9E75;
   --green-dim:   rgba(29,158,117,0.12);
+  --green-glow:  rgba(29,158,117,0.25);
   --green-text:  #0F6E56;
   --text:        #f0f0f0;
   --text2:       rgba(255,255,255,0.55);
@@ -20,7 +21,18 @@
   --radius-lg:   18px;
   --font:        'DM Sans', -apple-system, sans-serif;
   --font-head:   'Syne', sans-serif;
-  --transition:  0.15s cubic-bezier(0.4,0,0.2,1);
+
+  /* Tiered transitions — Google Material You / Netflix standard */
+  --ease:        cubic-bezier(0.4, 0, 0.2, 1);   /* standard */
+  --ease-out:    cubic-bezier(0, 0, 0.2, 1);      /* decelerate (enter) */
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);      /* accelerate (exit) */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* spring overshoot */
+
+  --t-micro:     0.1s var(--ease);    /* hover color, icon tint */
+  --t-fast:      0.18s var(--ease);   /* button press, toggle */
+  --transition:  0.22s var(--ease);   /* default — inputs, nav items */
+  --t-medium:    0.3s var(--ease);    /* sidebar, dropdown */
+  --t-page:      0.35s var(--ease-out); /* page enter */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,16 +45,41 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
 button { font-family: var(--font); cursor: pointer; }
 input, textarea, select { font-family: var(--font); }
 
+/* Smooth scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 4px;
+  transition: background var(--t-fast);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
+/* ── Page enter animation ─────────────────────────────────────── */
+/* Applied to every page component via .page-enter class */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter var(--t-page) both;
+}
+
+/* ── Typography ───────────────────────────────────────────────── */
 .page-title {
   font-family: var(--font-head);
   font-size: 1.5rem;
@@ -51,13 +88,20 @@ input, textarea, select { font-family: var(--font); }
   margin-bottom: 20px;
 }
 
+/* ── Card ─────────────────────────────────────────────────────── */
 .card {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.card:hover {
+  border-color: var(--border2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
 }
 
+/* ── Badge ────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -71,7 +115,9 @@ input, textarea, select { font-family: var(--font); }
 .badge-amber  { background: rgba(240,200,96,0.15);  color: var(--amber); }
 .badge-red    { background: rgba(255,107,107,0.15); color: var(--red); }
 .badge-gray   { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.badge-blue   { background: rgba(96,160,240,0.15); color: #60a0f0; }
 
+/* ── Buttons ──────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -83,16 +129,42 @@ input, textarea, select { font-family: var(--font); }
   color: var(--text2);
   font-size: 13px;
   font-weight: 500;
-  transition: all var(--transition);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast),
+    box-shadow var(--t-fast);
+  user-select: none;
 }
-.btn:hover { border-color: var(--border2); color: var(--text); }
+.btn:hover {
+  border-color: var(--border2);
+  color: var(--text);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.btn:active {
+  transform: scale(0.97) translateY(0);
+  box-shadow: none;
+}
+
 .btn-primary {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
+  box-shadow: 0 2px 10px var(--green-glow);
 }
-.btn-primary:hover { opacity: 0.88; }
+.btn-primary:hover {
+  background: #22b585;
+  border-color: #22b585;
+  box-shadow: 0 6px 20px var(--green-glow);
+}
+.btn-primary:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 4px var(--green-glow);
+}
 
+/* ── Toggle ───────────────────────────────────────────────────── */
 .toggle {
   width: 36px;
   height: 20px;
@@ -102,7 +174,7 @@ input, textarea, select { font-family: var(--font); }
   cursor: pointer;
   border: none;
   flex-shrink: 0;
-  transition: background var(--transition);
+  transition: background var(--t-fast), box-shadow var(--t-fast);
 }
 .toggle::after {
   content: '';
@@ -113,11 +185,16 @@ input, textarea, select { font-family: var(--font); }
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform var(--transition);
+  transition: transform 0.2s var(--ease-spring), box-shadow var(--t-fast);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
-.toggle.on  { background: var(--green); }
-.toggle.on::after { transform: translateX(16px); }
+.toggle.on  { background: var(--green); box-shadow: 0 0 0 3px var(--green-dim); }
+.toggle.on::after {
+  transform: translateX(16px);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+}
 
+/* ── Sliders ──────────────────────────────────────────────────── */
 .slider-row {
   display: flex;
   align-items: center;
@@ -142,6 +219,8 @@ input[type=range] {
   border-radius: 4px;
   outline: none;
   border: none;
+  cursor: pointer;
+  transition: accent-color var(--t-fast);
 }
 .slider-val {
   font-size: 11px;
@@ -150,6 +229,7 @@ input[type=range] {
   text-align: right;
 }
 
+/* ── Full screen center ───────────────────────────────────────── */
 .full-screen-center {
   display: flex;
   flex-direction: column;
@@ -162,4 +242,9 @@ input[type=range] {
   color: var(--text2);
 }
 
-.badge-blue { background: rgba(96,160,240,0.15); color: #60a0f0; }
+/* ── Focus ring (accessibility + polish) ─────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

@@ -6,9 +6,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.25s cubic-bezier(0.4,0,0.2,1),
-              transform 0.25s cubic-bezier(0.4,0,0.2,1);
   flex-shrink: 0;
+  transition:
+    width var(--t-medium),
+    transform var(--t-medium),
+    border-color var(--t-medium);
 }
 
 .sidebar-nav {
@@ -28,17 +30,54 @@
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
-  transition: all var(--transition);
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    padding var(--t-medium),
+    transform var(--t-fast);
 }
-.nav-link i { font-size: 18px; flex-shrink: 0; }
-.nav-link:hover { background: var(--bg3); color: var(--text); }
+
+/* Ripple-style active indicator */
+.nav-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--green);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.2s var(--ease-spring);
+}
+
+.nav-link i {
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: transform var(--t-fast), color var(--t-fast);
+}
+
+.nav-link:hover {
+  background: var(--bg3);
+  color: var(--text);
+  transform: translateX(2px);
+}
+.nav-link:hover i { transform: scale(1.1); }
+
+.nav-link:active { transform: scale(0.97); }
+
 .nav-link.active {
   background: var(--green-dim);
   color: var(--green);
 }
+.nav-link.active::before { transform: scaleY(1); }
+.nav-link.active i { color: var(--green); }
 
-/* Mobile: sidebar becomes bottom sheet */
+/* Mobile: sidebar slides in from left */
 @media (max-width: 700px) {
   .sidebar {
     position: fixed;
@@ -49,13 +88,24 @@
     z-index: 150;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    transition: transform var(--t-medium);
   }
   .sidebar.open { transform: translateX(0); }
 }
 
+/* Desktop: collapse to icon rail */
 @media (min-width: 701px) {
   .sidebar { transform: none !important; }
   .sidebar:not(.open) { width: 56px; }
-  .sidebar:not(.open) .nav-link span { display: none; }
+  .sidebar:not(.open) .nav-link span {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-medium);
+  }
+  .sidebar.open .nav-link span {
+    opacity: 1;
+    transition: opacity var(--t-medium);
+  }
   .sidebar:not(.open) .nav-link { justify-content: center; padding: 10px; }
+  .sidebar:not(.open) .nav-link::before { display: none; }
 }

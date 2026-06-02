@@ -1,11 +1,19 @@
 // src/pages/Login.jsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import './Login.css';
 
 export default function Login() {
-  const { loginWithGoogle, continueAsGuest } = useAuth();
+  const { loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest } = useAuth();
   const navigate = useNavigate();
+
+  const [mode, setMode]         = useState('signin'); // 'signin' | 'signup'
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName]         = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const handleGuest = () => {
     continueAsGuest();
@@ -13,8 +21,46 @@ export default function Login() {
   };
 
   const handleGoogle = async () => {
-    await loginWithGoogle();
-    navigate('/');
+    setError('');
+    try {
+      await loginWithGoogle();
+      navigate('/');
+    } catch (e) {
+      setError('Google sign-in failed. Please try email/password instead.');
+    }
+  };
+
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        await loginWithEmail(email, password);
+      } else {
+        await signUpWithEmail(email, password, name);
+      }
+      navigate('/');
+    } catch (e) {
+      const msg =
+        e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+          ? 'Incorrect email or password.'
+          : e.code === 'auth/email-already-in-use'
+          ? 'An account with this email already exists.'
+          : e.code === 'auth/weak-password'
+          ? 'Password must be at least 6 characters.'
+          : e.code === 'auth/invalid-email'
+          ? 'Please enter a valid email address.'
+          : 'Something went wrong. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = (newMode) => {
+    setMode(newMode);
+    setError('');
   };
 
   return (
@@ -41,13 +87,55 @@ export default function Login() {
           Health. Voice. AI. All in one.
         </p>
 
-        <button className="guest-btn" onClick={handleGuest}>
-          <i className="ti ti-rocket" />
-          Continue without login
-        </button>
+        {/* Sign In / Create Account tabs */}
+        <div className="email-tabs">
+          <button
+            className={`email-tab${mode === 'signin' ? ' active' : ''}`}
+            onClick={() => switchMode('signin')}
+          >Sign In</button>
+          <button
+            className={`email-tab${mode === 'signup' ? ' active' : ''}`}
+            onClick={() => switchMode('signup')}
+          >Create Account</button>
+        </div>
+
+        <form className="email-form" onSubmit={handleEmailSubmit}>
+          {mode === 'signup' && (
+            <input
+              className="email-input"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              autoComplete="name"
+            />
+          )}
+          <input
+            className="email-input"
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+          <input
+            className="email-input"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+          />
+          {error && <p className="email-error">{error}</p>}
+          <button className="email-submit-btn" type="submit" disabled={loading}>
+            {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
 
         <div className="login-divider">
-          <span>or sync across devices</span>
+          <span>or continue with</span>
         </div>
 
         <button className="google-btn" onClick={handleGoogle}>
@@ -58,6 +146,15 @@ export default function Login() {
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
           Sign in with Google
+        </button>
+
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+
+        <button className="guest-btn" onClick={handleGuest}>
+          <i className="ti ti-rocket" />
+          Continue without login
         </button>
 
         <p className="login-footer">

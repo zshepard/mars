@@ -11,26 +11,38 @@
   top: 0;
   z-index: 200;
   flex-shrink: 0;
+  transition: border-color var(--transition), background var(--transition);
 }
 
+/* ── Hamburger ────────────────────────────────────────────────── */
 .menu-btn {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px;
+  padding: 8px;
   background: none;
   border: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--t-fast);
 }
+.menu-btn:hover { background: var(--bg3); }
+.menu-btn:active { transform: scale(0.92); }
+
 .menu-btn span {
   display: block;
   width: 20px;
   height: 2px;
   background: var(--text2);
   border-radius: 2px;
-  transition: background var(--transition);
+  transition:
+    background var(--t-fast),
+    transform 0.22s var(--ease-spring),
+    opacity var(--t-fast),
+    width var(--t-fast);
 }
 .menu-btn:hover span { background: var(--text); }
 
+/* ── Brand ────────────────────────────────────────────────────── */
 .topbar-brand {
   display: flex;
   align-items: center;
@@ -44,6 +56,7 @@
 
 .topbar-center { flex: 1; display: flex; justify-content: center; }
 
+/* ── Sync pill ────────────────────────────────────────────────── */
 .sync-pill {
   display: flex;
   align-items: center;
@@ -53,21 +66,27 @@
   border-radius: 20px;
   border: 1px solid var(--border);
   color: var(--text2);
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background var(--transition);
 }
 .sync-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  transition: background var(--transition);
 }
 .sync-pill.online  .sync-dot { background: var(--green); animation: pulse 2s infinite; }
 .sync-pill.offline .sync-dot { background: var(--amber); }
 .sync-pill.offline { border-color: rgba(240,200,96,0.3); color: var(--amber); }
 
 @keyframes pulse {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
+/* ── Right cluster ────────────────────────────────────────────── */
 .topbar-right {
   display: flex;
   align-items: center;
@@ -84,19 +103,37 @@
   font-size: 14px;
   display: flex;
   align-items: center;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast);
 }
+.notif-btn:hover {
+  background: var(--bg3);
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+.notif-btn:active { transform: scale(0.93); }
 
+/* ── Avatar ───────────────────────────────────────────────────── */
 .avatar-btn {
   background: none;
   border: none;
   padding: 0;
+  transition: transform var(--t-fast), opacity var(--t-fast);
 }
+.avatar-btn:hover { transform: scale(1.08); }
+.avatar-btn:active { transform: scale(0.94); }
+
 .avatar-img {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   border: 2px solid rgba(29,158,117,0.4);
+  transition: border-color var(--transition);
 }
+.avatar-btn:hover .avatar-img { border-color: var(--green); }
+
 .avatar-placeholder {
   width: 32px;
   height: 32px;
@@ -108,19 +145,39 @@
   justify-content: center;
   font-size: 14px;
   color: var(--text2);
+  transition: border-color var(--transition), color var(--transition);
+}
+.avatar-btn:hover .avatar-placeholder {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ── User dropdown — smooth scale + fade from top-right ───────── */
+@keyframes dropdownEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-8px);
+    transform-origin: top right;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transform-origin: top right;
+  }
 }
 
 .user-dropdown {
   position: absolute;
-  top: 40px;
+  top: 44px;
   right: 0;
   background: var(--bg2);
   border: 1px solid var(--border2);
   border-radius: var(--radius);
   padding: 12px;
   min-width: 200px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
   z-index: 300;
+  animation: dropdownEnter 0.2s var(--ease-out) both;
 }
 .user-name  { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
 .user-email { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
@@ -134,5 +191,16 @@
   padding: 7px 12px;
   font-size: 12px;
   text-align: left;
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast),
+    background var(--t-fast),
+    transform var(--t-fast);
 }
-.user-dropdown button:hover { color: var(--text); border-color: var(--border2); }
+.user-dropdown button:hover {
+  color: var(--text);
+  border-color: var(--border2);
+  background: var(--bg3);
+  transform: translateX(2px);
+}
+.user-dropdown button:active { transform: scale(0.97); }
