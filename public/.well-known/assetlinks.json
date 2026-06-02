@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.mars.routine",
+    "sha256_cert_fingerprints": ["3A:2E:B6:B1:EC:59:A6:F3:8E:9B:D5:B3:77:BF:6E:D6:EB:7A:28:91:EA:DB:79:25:05:D4:27:96:6E:DA:D7:B6"]
+  }
+}]
