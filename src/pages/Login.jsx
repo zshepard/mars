@@ -8,12 +8,14 @@ export default function Login() {
   const { loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode]         = useState('signin'); // 'signin' | 'signup'
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName]         = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [mode, setMode]             = useState('signin'); // 'signin' | 'signup'
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [name, setName]             = useState('');
+  const [error, setError]           = useState('');
+  const [info, setInfo]             = useState('');
+  const [loading, setLoading]       = useState(false);
+  const [noAccountEmail, setNoAccountEmail] = useState(''); // tracks email that had no account
 
   const handleGuest = () => {
     continueAsGuest();
@@ -22,9 +24,10 @@ export default function Login() {
 
   const handleGoogle = async () => {
     setError('');
+    setInfo('');
     try {
       await loginWithGoogle();
-      navigate('/');
+      // For redirect flow, page will navigate away — no need to call navigate('/')
     } catch (e) {
       setError('Google sign-in failed. Please try email/password instead.');
     }
@@ -33,26 +36,46 @@ export default function Login() {
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
+
     try {
       if (mode === 'signin') {
         await loginWithEmail(email, password);
+        navigate('/');
       } else {
         await signUpWithEmail(email, password, name);
+        navigate('/');
       }
-      navigate('/');
     } catch (e) {
-      const msg =
-        e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
-          ? 'Incorrect email or password.'
-          : e.code === 'auth/email-already-in-use'
-          ? 'An account with this email already exists.'
-          : e.code === 'auth/weak-password'
-          ? 'Password must be at least 6 characters.'
-          : e.code === 'auth/invalid-email'
-          ? 'Please enter a valid email address.'
-          : 'Something went wrong. Please try again.';
-      setError(msg);
+      // Smart auto-detect: if no account found, offer to create one
+      if (
+        e.code === 'auth/user-not-found' ||
+        e.code === 'auth/invalid-credential' ||
+        e.code === 'auth/wrong-password'
+      ) {
+        if (mode === 'signin') {
+          // Try to detect if it's "no account" vs "wrong password"
+          if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+            setNoAccountEmail(email);
+            setInfo(`No account found for ${email}. Switch to "Create Account" to sign up.`);
+            setError('');
+          } else {
+            setError('Incorrect password. Please try again.');
+          }
+        } else {
+          setError('Incorrect email or password.');
+        }
+      } else if (e.code === 'auth/email-already-in-use') {
+        setInfo(`An account already exists for ${email}. Switch to "Sign In" to log in.`);
+        setError('');
+      } else if (e.code === 'auth/weak-password') {
+        setError('Password must be at least 6 characters.');
+      } else if (e.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -61,6 +84,16 @@ export default function Login() {
   const switchMode = (newMode) => {
     setMode(newMode);
     setError('');
+    setInfo('');
+  };
+
+  // When user clicks the info banner to switch modes
+  const handleInfoSwitch = () => {
+    if (noAccountEmail && mode === 'signin') {
+      switchMode('signup');
+    } else if (mode === 'signup') {
+      switchMode('signin');
+    }
   };
 
   return (
@@ -115,7 +148,7 @@ export default function Login() {
             type="email"
             placeholder="Email address"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={e => { setEmail(e.target.value); setInfo(''); setNoAccountEmail(''); }}
             required
             autoComplete="email"
           />
@@ -128,11 +161,34 @@ export default function Login() {
             required
             autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
           />
+
           {error && <p className="email-error">{error}</p>}
+
+          {/* Smart info banner with action */}
+          {info && (
+            <div className="email-info-banner" onClick={handleInfoSwitch}>
+              <span>{info}</span>
+              {noAccountEmail && mode === 'signin' && (
+                <strong> → Create Account</strong>
+              )}
+              {mode === 'signup' && info.includes('already exists') && (
+                <strong> → Sign In</strong>
+              )}
+            </div>
+          )}
+
           <button className="email-submit-btn" type="submit" disabled={loading}>
             {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+
+        {/* Quick switch hint */}
+        <p className="login-switch-hint">
+          {mode === 'signin'
+            ? <>New to MARS? <button className="login-switch-btn" onClick={() => switchMode('signup')}>Create an account</button></>
+            : <>Already have an account? <button className="login-switch-btn" onClick={() => switchMode('signin')}>Sign in</button></>
+          }
+        </p>
 
         <div className="login-divider">
           <span>or continue with</span>
@@ -145,8 +201,12 @@ export default function Login() {
             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          Sign in with Google
+          Sign in / Sign up with Google
         </button>
+
+        <p className="google-note">
+          Google automatically creates an account on first use
+        </p>
 
         <div className="login-divider">
           <span>or</span>

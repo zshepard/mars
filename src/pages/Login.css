@@ -297,3 +297,56 @@
   color: var(--text3);
   line-height: 1.6;
 }
+
+/* ── Smart info banner ───────────────────────────────────────────── */
+.email-info-banner {
+  background: rgba(29, 158, 117, 0.12);
+  border: 1px solid rgba(29, 158, 117, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #1D9E75;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-standard), border-color var(--transition-standard);
+  line-height: 1.45;
+}
+.email-info-banner:hover {
+  background: rgba(29, 158, 117, 0.2);
+  border-color: rgba(29, 158, 117, 0.55);
+}
+.email-info-banner strong {
+  display: block;
+  margin-top: 4px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Switch hint line ─────────────────────────────────────────────── */
+.login-switch-hint {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.45);
+  margin: 4px 0 0;
+}
+.login-switch-btn {
+  background: none;
+  border: none;
+  color: #1D9E75;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-micro);
+}
+.login-switch-btn:hover { color: #25c48f; }
+
+/* ── Google note ─────────────────────────────────────────────────── */
+.google-note {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.35);
+  margin: -6px 0 4px;
+  text-align: center;
+}
