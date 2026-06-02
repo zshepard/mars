@@ -1,0 +1,47 @@
+/* src/pages/HomeControl.css */
+.mood-section { margin-bottom: 20px; }
+.section-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+.mood-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.mood-pill {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+.mood-pill.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.mood-pill:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+
+.room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 14px; margin-bottom: 16px; }
+.room-card { }
+.room-header { margin-bottom: 14px; }
+.room-name { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.room-name i { font-size: 18px; color: var(--green); }
+
+.room-toggles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.room-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 11px;
+  transition: all var(--transition);
+}
+.room-toggle-btn.on { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+.offline-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 8px;
+}
+.offline-note i { font-size: 16px; color: var(--text3); flex-shrink: 0; }

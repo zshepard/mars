@@ -1,0 +1,51 @@
+{
+  "name": "MARS — My Automated Routine System",
+  "short_name": "MARS",
+  "description": "Automated alarm, routine, home control, and health system. Works offline.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080808",
+  "theme_color": "#1D9E75",
+  "lang": "en-US",
+  "categories": ["lifestyle", "health", "utilities", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-72.png",  "sizes": "72x72",  "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-96.png",  "sizes": "96x96",  "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-128.png", "sizes": "128x128","type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-144.png", "sizes": "144x144","type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-152.png", "sizes": "152x152","type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192","type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-384.png", "sizes": "384x384","type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512","type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Morning Routine",
+      "short_name": "Morning",
+      "url": "/?action=morning",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Home Control",
+      "short_name": "Home",
+      "url": "/?tab=home",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Voice Command",
+      "short_name": "Voice",
+      "url": "/?action=voice",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.mars.routine",
+      "id": "com.mars.routine"
+    }
+  ],
+  "prefer_related_applications": false
+}

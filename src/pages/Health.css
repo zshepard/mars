@@ -1,0 +1,34 @@
+/* src/pages/Health.css */
+.health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-bottom: 16px; }
+.health-card { display: flex; align-items: center; gap: 14px; }
+.health-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--green-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.health-icon i { font-size: 20px; color: var(--green); }
+.health-info { flex: 1; }
+.health-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.health-value { font-size: 18px; font-weight: 700; color: var(--text); font-family: var(--font-head); letter-spacing: -0.02em; }
+.health-action { font-size: 11px; color: var(--green); margin-top: 2px; }
+
+.section-desc { font-size: 12px; color: var(--text3); margin-bottom: 12px; line-height: 1.5; }
+
+.mood-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.mood-pill { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); font-size: 13px; transition: all var(--transition); cursor: pointer; }
+.mood-pill:hover { border-color: var(--green); }
+.mood-pill.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+.mood-result { font-size: 12px; color: var(--text2); padding: 8px 12px; background: var(--bg3); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.mood-result i { color: var(--green); }
+
+.auto-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 12px; color: var(--text2); border-top: 1px solid var(--border2); margin-top: 10px; padding-top: 10px; }
+
+.link-btn { background: none; border: none; color: var(--accent); cursor: pointer; text-decoration: underline; font-size: inherit; padding: 0; }
+
+.health-logic { margin-top: 4px; }
+.logic-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.logic-row { display: flex; align-items: center; font-size: 12px; gap: 8px; flex-wrap: wrap; }
+.logic-trigger { color: var(--text2); flex: 1; min-width: 150px; }
+.logic-arrow { color: var(--text3); font-weight: 700; }
+.logic-result { color: var(--green); font-weight: 500; flex: 1; min-width: 200px; }
+.logic-test-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border2); background: var(--bg3); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition); flex-shrink: 0; }
+.logic-test-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.logic-note { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+.logic-note i { color: var(--amber); }

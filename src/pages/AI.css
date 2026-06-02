@@ -1,0 +1,41 @@
+/* src/pages/AI.css */
+.badge-blue { background: rgba(96,160,240,0.15); color: #60a0f0; }
+
+.ai-intro { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.ai-brain-icon { font-size: 32px; color: var(--green); flex-shrink: 0; margin-top: 2px; }
+.ai-intro-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.ai-intro-sub { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+.insight-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.insight-card { }
+.insight-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.insight-body { font-size: 12px; color: var(--text2); line-height: 1.7; margin-bottom: 12px; }
+.insight-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--green);
+  background: var(--green-dim);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+.insight-suggestion i { font-size: 15px; flex-shrink: 0; }
+.apply-btn {
+  margin-left: auto;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ai-roadmap { }
+.roadmap-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.roadmap-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.roadmap-row i { font-size: 14px; }
+.roadmap-row.done { color: var(--green); }
+.roadmap-row.next { color: var(--text3); }

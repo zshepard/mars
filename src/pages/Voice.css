@@ -1,0 +1,55 @@
+/* src/pages/Voice.css */
+.voice-card { text-align: center; margin-bottom: 20px; padding: 32px; }
+.voice-circle-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.voice-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--green-dim);
+  border: 2px solid var(--green);
+  color: var(--green);
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  position: relative;
+  z-index: 1;
+}
+.voice-circle.listening { background: var(--green); color: #fff; }
+.voice-ring {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid var(--green);
+  animation: ring 1.2s ease-out infinite;
+  opacity: 0.5;
+}
+@keyframes ring {
+  from { transform: scale(0.8); opacity: 0.8; }
+  to   { transform: scale(1.4); opacity: 0; }
+}
+.voice-prompt { font-size: 14px; color: var(--text2); margin-bottom: 12px; }
+.voice-transcript { font-size: 15px; color: var(--text); font-weight: 500; margin-bottom: 12px; }
+.voice-hey { color: var(--green); }
+.voice-note { font-size: 12px; color: var(--text3); line-height: 1.6; }
+
+.search-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.search-input:focus { border-color: var(--green); }
+.search-input::placeholder { color: var(--text3); }
+
+.cmd-list { display: flex; flex-direction: column; gap: 8px; }
+.cmd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cmd-phrase { font-size: 13px; color: var(--text); }
+.cmd-highlight { color: var(--green); }
+.cmd-action { font-size: 11px; color: var(--text2); }

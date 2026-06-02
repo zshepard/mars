@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
+  <rect width='512' height='512' rx='112.64' fill='#080808'/>
+  <polygon points='256,76.8 435.2,256 256,435.2 76.8,256' fill='none' stroke='#1D9E75' stroke-width='20.48'/>
+  <circle cx='256' cy='256' r='61.44' fill='#1D9E75'/>
+  <text x='256' y='450.56' font-family='Arial,sans-serif' font-size='71.68' font-weight='bold' fill='white' text-anchor='middle'>MARS</text>
+</svg>

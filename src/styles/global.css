@@ -1,0 +1,165 @@
+/* src/styles/global.css */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap');
+
+:root {
+  --bg:          #080808;
+  --bg2:         #101010;
+  --bg3:         #181818;
+  --border:      rgba(255,255,255,0.08);
+  --border2:     rgba(255,255,255,0.14);
+  --green:       #1D9E75;
+  --green-dim:   rgba(29,158,117,0.12);
+  --green-text:  #0F6E56;
+  --text:        #f0f0f0;
+  --text2:       rgba(255,255,255,0.55);
+  --text3:       rgba(255,255,255,0.28);
+  --amber:       #f0c860;
+  --red:         #ff6b6b;
+  --radius:      12px;
+  --radius-sm:   8px;
+  --radius-lg:   18px;
+  --font:        'DM Sans', -apple-system, sans-serif;
+  --font-head:   'Syne', sans-serif;
+  --transition:  0.15s cubic-bezier(0.4,0,0.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button { font-family: var(--font); cursor: pointer; }
+input, textarea, select { font-family: var(--font); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+.page-title {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.badge-green  { background: rgba(29,158,117,0.15); color: var(--green); }
+.badge-amber  { background: rgba(240,200,96,0.15);  color: var(--amber); }
+.badge-red    { background: rgba(255,107,107,0.15); color: var(--red); }
+.badge-gray   { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+.btn:hover { border-color: var(--border2); color: var(--text); }
+.btn-primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.btn-primary:hover { opacity: 0.88; }
+
+.toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--border2);
+  position: relative;
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+.toggle::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform var(--transition);
+}
+.toggle.on  { background: var(--green); }
+.toggle.on::after { transform: translateX(16px); }
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.slider-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text2);
+  width: 58px;
+  flex-shrink: 0;
+}
+.slider-label i { font-size: 14px; }
+input[type=range] {
+  flex: 1;
+  height: 3px;
+  accent-color: var(--green);
+  background: var(--border2);
+  border-radius: 4px;
+  outline: none;
+  border: none;
+}
+.slider-val {
+  font-size: 11px;
+  color: var(--text2);
+  width: 30px;
+  text-align: right;
+}
+
+.full-screen-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  background: var(--bg);
+  font-size: 0.9rem;
+  color: var(--text2);
+}
+
+.badge-blue { background: rgba(96,160,240,0.15); color: #60a0f0; }
