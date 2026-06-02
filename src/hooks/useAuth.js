@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
       setUser({ uid: GUEST_ID, displayName: 'Guest', isGuest: true });
       setLoading(false);
     }
+
+    // Handle redirect result from Google Sign-In (WebView compatible)
+    getRedirectResult(auth).catch(() => {});
 
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -48,7 +51,10 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+  const loginWithGoogle = () => {
+    // Use redirect (not popup) so Google Sign-In works inside WebView
+    return signInWithRedirect(auth, googleProvider);
+  };
 
   const loginWithEmail = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
