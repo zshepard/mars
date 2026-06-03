@@ -19,3 +19,99 @@
 @media (max-width: 500px) {
   .feature-compare { grid-template-columns: 1fr; }
 }
+
+/* ── Device Detection Card ── */
+.device-detect-card {
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.device-detect-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.device-detect-icon {
+  font-size: 40px;
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.device-detect-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.device-brand {
+  color: var(--green);
+}
+
+.device-detect-sub {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.device-detect-sub i {
+  font-size: 14px;
+}
+
+.device-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.spec-label {
+  font-size: 11px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.spec-label i {
+  font-size: 13px;
+  color: var(--green);
+}
+
+.spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.spec-value i {
+  font-size: 14px;
+  color: var(--text2);
+}
+
+@media (max-width: 400px) {
+  .device-specs-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
