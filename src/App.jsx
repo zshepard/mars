@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState }                                    from 'react';
+import { useState, useEffect }                         from 'react';
 import { BrowserRouter, Routes, Route, Navigate }     from 'react-router-dom';
 import { AuthProvider }                                from './hooks/useAuth';
 import ProtectedRoute                                  from './components/ProtectedRoute';
@@ -21,9 +21,11 @@ import './App.css';
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isWebView = /MARS-App|wv|WebView/.test(navigator.userAgent) ||
+    (navigator.userAgent.includes('Android') && /Version\/\d/.test(navigator.userAgent));
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isWebView ? ' mars-webview' : ''}`}>
       <Topbar onMenuToggle={() => setSidebarOpen((p) => !p)} />
       <div className="app-body">
         <Sidebar open={sidebarOpen} />
