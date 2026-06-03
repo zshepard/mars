@@ -1,8 +1,8 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase/config';
+import { auth, db, googleProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
@@ -56,6 +56,23 @@ export function AuthProvider({ children }) {
     return signInWithRedirect(auth, googleProvider);
   };
 
+  const sendMagicLink = async (email) => {
+    const actionCodeSettings = {
+      url: window.location.origin + '/login?emailLink=1',
+      handleCodeInApp: true,
+    };
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    // Save email to localStorage so we can complete sign-in when they return
+    localStorage.setItem('mars-email-link-pending', email);
+  };
+
+  const completeMagicLinkSignIn = async (email, link) => {
+    if (!isSignInWithEmailLink(auth, link)) throw new Error('Invalid sign-in link');
+    const cred = await signInWithEmailLink(auth, email, link);
+    localStorage.removeItem('mars-email-link-pending');
+    return cred;
+  };
+
   const loginWithEmail = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
 
@@ -79,7 +96,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, guest, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, logout }}>
+    <AuthContext.Provider value={{ user, guest, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, logout, sendMagicLink, completeMagicLinkSignIn }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,6 @@
 // src/firebase/config.js
 import { initializeApp }               from 'firebase/app';
-import { getAuth, GoogleAuthProvider }  from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { getFirestore }                from 'firebase/firestore';
 import { getMessaging, isSupported }   from 'firebase/messaging';
 
@@ -20,6 +20,7 @@ const app = initializeApp(firebaseConfig);
 export const auth            = getAuth(app);
 export const db              = getFirestore(app);
 export const googleProvider  = new GoogleAuthProvider();
+export { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink };
 export const VAPID_KEY       = process.env.REACT_APP_FIREBASE_VAPID_KEY || '';
 
 // Check if Firebase is properly configured (not in offline-only mode)

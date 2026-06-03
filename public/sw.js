@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.0.0';
+const MARS_VERSION  = 'mars-v1.1.0';
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -391,34 +391,36 @@ self.addEventListener('message', async (event) => {
     // App telling SW to schedule an alarm
     case 'SCHEDULE_ALARM': {
       const { alarm_id, fire_at, payload } = data;
-      const delay = new Date(fire_at).getTime() - Date.now();
-      if (delay > 0 && delay < 86400000) {
-        setTimeout(() => {
-          self.registration.showNotification(payload.title || 'MARS Alarm', {
-            body: payload.body || 'Your routine is starting.',
-            icon: '/icons/icon-192.png',
-            badge: '/icons/badge-72.png',
-            vibrate: [200, 100, 200, 100, 400],
-            requireInteraction: !payload.auto_dismiss,
-            data: payload,
-            tag: alarm_id,
-            renotify: true,
-            actions: payload.auto_dismiss
-              ? [{ action: 'snooze', title: '⏱ Snooze 5m' }]
-              : [{ action: 'dismiss', title: '✓ Dismiss' }, { action: 'snooze', title: '⏱ Snooze 5m' }],
-          });
-        }, delay);
-        console.log(`[MARS SW] Alarm ${alarm_id} scheduled in ${Math.round(delay/1000)}s`);
-      }
+      // Persist alarm to cache so it survives SW restart
+      const alarmCache = await caches.open(ALARM_CACHE);
+      const existingResp = await alarmCache.match('/mars/scheduled-alarms');
+      const alarmData = existingResp ? await existingResp.json() : { alarms: [] };
+      alarmData.alarms = alarmData.alarms.filter(a => a.alarm_id !== alarm_id);
+      alarmData.alarms.push({ alarm_id, fire_at, payload });
+      await alarmCache.put('/mars/scheduled-alarms', new Response(JSON.stringify(alarmData)));
+      // Schedule the in-memory timer
+      scheduleAlarmTimer(alarm_id, fire_at, payload);
+      console.log(`[MARS SW] Alarm ${alarm_id} persisted and scheduled`);
       break;
     }
 
     // App telling SW to cancel a scheduled alarm
     case 'CANCEL_ALARM': {
       const { alarm_id } = data;
+      // Remove from persistence
+      const aCache = await caches.open(ALARM_CACHE);
+      const aResp = await aCache.match('/mars/scheduled-alarms');
+      const aData = aResp ? await aResp.json() : { alarms: [] };
+      aData.alarms = aData.alarms.filter(a => a.alarm_id !== alarm_id);
+      await aCache.put('/mars/scheduled-alarms', new Response(JSON.stringify(aData)));
+      // Cancel in-memory timer
+      if (scheduledAlarmTimers[alarm_id]) {
+        clearTimeout(scheduledAlarmTimers[alarm_id]);
+        delete scheduledAlarmTimers[alarm_id];
+      }
       const notifs = await self.registration.getNotifications({ tag: alarm_id });
       notifs.forEach((n) => n.close());
-      console.log(`[MARS SW] Alarm ${alarm_id} cancelled`);
+      console.log(`[MARS SW] Alarm ${alarm_id} cancelled and removed`);
       break;
     }
 
@@ -476,6 +478,51 @@ self.addEventListener('message', async (event) => {
       console.log('[MARS SW] Unknown message type:', type);
   }
 });
+
+// ════════════════════════════════════════════════════════════════
+//  SCHEDULED ALARMS — persistent alarm timers that survive SW restart
+// ════════════════════════════════════════════════════════════════
+const scheduledAlarmTimers = {};
+
+function scheduleAlarmTimer(alarm_id, fire_at, payload) {
+  // Clear any existing timer for this alarm
+  if (scheduledAlarmTimers[alarm_id]) {
+    clearTimeout(scheduledAlarmTimers[alarm_id]);
+  }
+  const delay = new Date(fire_at).getTime() - Date.now();
+  if (delay <= 0) {
+    console.log(`[MARS SW] Alarm ${alarm_id} fire_at is in the past — skipping`);
+    return;
+  }
+  // Cap at 24h — SW will be restarted and alarms re-loaded from cache before then
+  const safeDelay = Math.min(delay, 86400000);
+  scheduledAlarmTimers[alarm_id] = setTimeout(async () => {
+    delete scheduledAlarmTimers[alarm_id];
+    // Remove from persistence after firing
+    const aCache = await caches.open(ALARM_CACHE);
+    const aResp = await aCache.match('/mars/scheduled-alarms');
+    const aData = aResp ? await aResp.json() : { alarms: [] };
+    aData.alarms = aData.alarms.filter(a => a.alarm_id !== alarm_id);
+    await aCache.put('/mars/scheduled-alarms', new Response(JSON.stringify(aData)));
+    // Fire the notification
+    await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
+      body: payload.body || 'Time to start your routine.',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-72.png',
+      vibrate: [300, 100, 300, 100, 500],
+      requireInteraction: true,
+      data: { alarm_id, ...payload },
+      tag: alarm_id,
+      renotify: true,
+      actions: [
+        { action: 'dismiss', title: '\u2713 Dismiss' },
+        { action: 'snooze', title: '\u23f1 Snooze 5m' },
+      ],
+    });
+    console.log(`[MARS SW] Alarm ${alarm_id} fired!`);
+  }, safeDelay);
+  console.log(`[MARS SW] Alarm ${alarm_id} scheduled in ${Math.round(safeDelay/1000)}s`);
+}
 
 // ════════════════════════════════════════════════════════════════
 //  SCHEDULED LINKS — open URLs at set times throughout the day
@@ -545,13 +592,34 @@ async function fireLinkOpen(link_id, url, device) {
   }
 }
 
-// On SW activate, re-register all scheduled links
+// On SW activate, re-register all scheduled alarms AND links
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const linkCache = await caches.open(ALARM_CACHE);
-    const resp = await linkCache.match('/mars/scheduled-links');
-    if (resp) {
-      const data = await resp.json();
+    const cache = await caches.open(ALARM_CACHE);
+
+    // Restore persisted alarms
+    const alarmResp = await cache.match('/mars/scheduled-alarms');
+    if (alarmResp) {
+      const alarmData = await alarmResp.json();
+      const now = Date.now();
+      const stillPending = [];
+      (alarmData.alarms || []).forEach(alarm => {
+        const fireTime = new Date(alarm.fire_at).getTime();
+        if (fireTime > now) {
+          scheduleAlarmTimer(alarm.alarm_id, alarm.fire_at, alarm.payload);
+          stillPending.push(alarm);
+        }
+        // Expired alarms are silently dropped
+      });
+      // Update cache to only keep still-pending alarms
+      await cache.put('/mars/scheduled-alarms', new Response(JSON.stringify({ alarms: stillPending })));
+      console.log(`[MARS SW] Restored ${stillPending.length} alarm(s) on activate`);
+    }
+
+    // Restore persisted links
+    const linkResp = await cache.match('/mars/scheduled-links');
+    if (linkResp) {
+      const data = await linkResp.json();
       (data.links || []).forEach(link => {
         scheduleNextLinkOpen(link.link_id, link.time, link.days, link.url, link.device);
       });
