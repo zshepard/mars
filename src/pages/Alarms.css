@@ -95,6 +95,34 @@
   font-size: 14px;
 }
 
+.sound-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sound-selector select {
+  flex: 1;
+}
+.btn-preview {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  font-size: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--green);
+  white-space: nowrap;
+  transition: all var(--transition-standard);
+}
+.btn-preview:hover {
+  background: var(--green-dim);
+  border-color: var(--green);
+  transform: scale(1.03);
+}
+
 @media (max-width: 600px) {
   .form-grid { grid-template-columns: 1fr; }
+  .sound-selector { flex-direction: column; align-items: stretch; }
 }

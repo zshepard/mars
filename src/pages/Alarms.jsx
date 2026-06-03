@@ -5,7 +5,20 @@ import { useAlarms } from '../hooks/useAlarms';
 import './Alarms.css';
 
 const DAYS    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const SOUNDS  = ['alarm-default','alarm-gentle','alarm-military','chime'];
+const SOUNDS = [
+  { id: 'alarm-default',     label: 'Default',       emoji: '🔔' },
+  { id: 'alarm-gentle',      label: 'Gentle',        emoji: '🌅' },
+  { id: 'alarm-military',    label: 'Military',      emoji: '🎖️' },
+  { id: 'chime',             label: 'Chime',         emoji: '🎵' },
+  { id: 'alarm-classic',    label: 'Classic Bell',  emoji: '⏰' },
+  { id: 'alarm-digital',    label: 'Digital Beep',  emoji: '📟' },
+  { id: 'alarm-nature',     label: 'Nature',        emoji: '🌿' },
+  { id: 'alarm-motivational', label: 'Motivational', emoji: '💪' },
+  { id: 'alarm-piano',      label: 'Piano',         emoji: '🎹' },
+  { id: 'alarm-cosmic',     label: 'Cosmic',        emoji: '🚀' },
+  { id: 'alarm-marimba',    label: 'Marimba',       emoji: '🪘' },
+  { id: 'alarm-pulse',      label: 'Pulse',         emoji: '⚡' },
+];
 const DEVICES = ['phone','computer','all'];
 
 const EMPTY = {
@@ -24,6 +37,14 @@ export default function Alarms() {
   const [saving, setSaving]               = useState(false);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const previewSound = (soundId) => {
+    const ext = ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
+    const audio = new Audio(`/sounds/${soundId}.${ext}`);
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+    setTimeout(() => { audio.pause(); audio.currentTime = 0; }, 4000);
+  };
 
   const toggleDay = (d) =>
     set('days', form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]);
@@ -116,9 +137,14 @@ export default function Alarms() {
           <div className="form-grid">
             <div className="form-field">
               <label>Sound</label>
-              <select value={form.sound} onChange={(e) => set('sound', e.target.value)}>
-                {SOUNDS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="sound-selector">
+                <select value={form.sound} onChange={(e) => set('sound', e.target.value)}>
+                  {SOUNDS.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
+                </select>
+                <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)} title="Preview sound">
+                  <i className="ti ti-player-play" /> Preview
+                </button>
+              </div>
             </div>
             <div className="form-field">
               <label>Routine step label (optional)</label>
@@ -167,7 +193,9 @@ export default function Alarms() {
                   <span className="badge badge-gray">
                     {alarm.autoDismiss ? `Auto-dismiss ${alarm.dismissAfter}s` : 'Button dismiss'}
                   </span>
-                  <span className="badge badge-gray">{alarm.sound}</span>
+                  <span className="badge badge-gray">
+                    {SOUNDS.find(s => s.id === alarm.sound)?.emoji || '🔔'} {SOUNDS.find(s => s.id === alarm.sound)?.label || alarm.sound}
+                  </span>
                 </div>
               </div>
 

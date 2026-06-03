@@ -17,10 +17,18 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/sounds/alarm-default.mp3',
-  '/sounds/alarm-gentle.mp3',
-  '/sounds/alarm-military.mp3',
-  '/sounds/chime.mp3',
+  '/sounds/alarm-default.wav',
+  '/sounds/alarm-gentle.wav',
+  '/sounds/alarm-military.wav',
+  '/sounds/chime.wav',
+  '/sounds/alarm-classic.mp3',
+  '/sounds/alarm-digital.mp3',
+  '/sounds/alarm-nature.mp3',
+  '/sounds/alarm-motivational.mp3',
+  '/sounds/alarm-piano.mp3',
+  '/sounds/alarm-cosmic.mp3',
+  '/sounds/alarm-marimba.mp3',
+  '/sounds/alarm-pulse.mp3',
 ];
 
 // ── Voice command phrases cached for offline recognition ───────
