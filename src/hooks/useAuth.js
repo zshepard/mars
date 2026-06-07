@@ -23,32 +23,48 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
 
-    // Handle redirect result from Google Sign-In (WebView compatible)
+    // Safety timeout — if loading is still true after 8 seconds, force it false.
+    // Prevents infinite loading screen if Firebase/Firestore is slow or misconfigured.
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
+    // Handle redirect result from Google Sign-In
     getRedirectResult(auth).catch(() => {});
 
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(safetyTimer);
       if (firebaseUser) {
         // User signed in — upgrade from guest if applicable
         localStorage.removeItem(GUEST_KEY);
         setGuest(false);
-        const ref = doc(db, 'users', firebaseUser.uid);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) {
-          await setDoc(ref, {
-            uid:         firebaseUser.uid,
-            displayName: firebaseUser.displayName,
-            email:       firebaseUser.email,
-            photoURL:    firebaseUser.photoURL,
-            createdAt:   serverTimestamp(),
-          });
+        // Wrap Firestore in try/catch so a DB error never blocks the auth flow
+        try {
+          const ref = doc(db, 'users', firebaseUser.uid);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) {
+            await setDoc(ref, {
+              uid:         firebaseUser.uid,
+              displayName: firebaseUser.displayName,
+              email:       firebaseUser.email,
+              photoURL:    firebaseUser.photoURL,
+              createdAt:   serverTimestamp(),
+            });
+          }
+        } catch (err) {
+          console.warn('Firestore user doc error (non-fatal):', err);
         }
         setUser({ ...firebaseUser, isGuest: false });
-      } else if (!wasGuest) {
-        setUser(null);
+      } else {
+        if (!wasGuest) setUser(null);
       }
       setLoading(false);
     });
-    return unsub;
+
+    return () => {
+      unsub();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   const loginWithGoogle = () => {
