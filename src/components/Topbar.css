@@ -56,6 +56,54 @@
 
 .topbar-center { flex: 1; display: flex; justify-content: center; }
 
+/* ── Digital Clock ────────────────────────────────────────────── */
+.topbar-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  user-select: none;
+}
+
+.clock-time {
+  font-family: var(--font-head);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-seconds {
+  font-size: 1rem;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.clock-ampm {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 0.08em;
+  margin-left: 3px;
+  vertical-align: super;
+}
+
+.clock-date {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+@media (max-width: 480px) {
+  .clock-seconds { display: none; }
+  .clock-date    { display: none; }
+  .clock-time    { font-size: 1.1rem; }
+}
+
 /* ── Sync pill ────────────────────────────────────────────────── */
 .sync-pill {
   display: flex;

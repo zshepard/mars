@@ -30,17 +30,8 @@ const EMPTY = {
   sound: 'alarm-default', routineStep: '',
 };
 
-export default function Alarms() {
-  const { user }   = useAuth();
-  const { alarms, loading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
-
-  // ── Client-side timer (fires even when notifications are blocked) ──
-  const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
-
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm]         = useState(EMPTY);
-  const [saving, setSaving]     = useState(false);
-
+// ── Shared alarm form used for both Add and Edit ──────────────────
+function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const previewSound = (soundId) => {
@@ -54,6 +45,117 @@ export default function Alarms() {
   const toggleDay = (d) =>
     set('days', form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]);
 
+  return (
+    <div className="alarm-form card">
+      <h3 className="form-title">{title}</h3>
+
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Time</label>
+          <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
+        </div>
+        <div className="form-field">
+          <label>Label</label>
+          <input type="text" value={form.label} placeholder="Morning protocol..."
+            onChange={(e) => set('label', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-field">
+        <label>Days</label>
+        <div className="day-pills">
+          {DAYS.map((d) => (
+            <button key={d}
+              className={`day-pill ${form.days.includes(d) ? 'active' : ''}`}
+              onClick={() => toggleDay(d)}>{d}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Dismiss mode</label>
+          <div className="radio-group">
+            <label className="radio-opt">
+              <input type="radio" checked={!form.autoDismiss}
+                onChange={() => set('autoDismiss', false)} />
+              Button dismiss
+            </label>
+            <label className="radio-opt">
+              <input type="radio" checked={form.autoDismiss}
+                onChange={() => set('autoDismiss', true)} />
+              Auto-dismiss
+            </label>
+          </div>
+        </div>
+        {form.autoDismiss && (
+          <div className="form-field">
+            <label>Auto-dismiss after (seconds)</label>
+            <input type="number" value={form.dismissAfter} min={10} max={300}
+              onChange={(e) => set('dismissAfter', parseInt(e.target.value))} />
+          </div>
+        )}
+      </div>
+
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Open URL on dismiss</label>
+          <input type="url" value={form.openUrl} placeholder="https://..."
+            onChange={(e) => set('openUrl', e.target.value)} />
+        </div>
+        <div className="form-field">
+          <label>Open on device</label>
+          <select value={form.openDevice} onChange={(e) => set('openDevice', e.target.value)}>
+            {DEVICES.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Sound</label>
+          <div className="sound-selector">
+            <select value={form.sound} onChange={(e) => set('sound', e.target.value)}>
+              {SOUNDS.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
+            </select>
+            <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)} title="Preview sound">
+              <i className="ti ti-player-play" /> Preview
+            </button>
+          </div>
+        </div>
+        <div className="form-field">
+          <label>Routine step label (optional)</label>
+          <input type="text" value={form.routineStep} placeholder="e.g. Wake up"
+            onChange={(e) => set('routineStep', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-actions">
+        <button className="btn" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save alarm'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Alarms page ──────────────────────────────────────────────
+export default function Alarms() {
+  const { user }   = useAuth();
+  const { alarms, loading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
+  const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
+
+  const [showForm, setShowForm]   = useState(false);
+  const [form, setForm]           = useState(EMPTY);
+  const [saving, setSaving]       = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm]   = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  // ── Add new alarm ──────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.time) return;
     setSaving(true);
@@ -61,6 +163,38 @@ export default function Alarms() {
     setForm(EMPTY);
     setShowForm(false);
     setSaving(false);
+  };
+
+  // ── Open edit form for an alarm ────────────────────────────────
+  const startEdit = (alarm) => {
+    setEditingId(alarm.id);
+    setEditForm({
+      time:        alarm.time        || '05:30',
+      label:       alarm.label       || '',
+      enabled:     alarm.enabled     ?? true,
+      autoDismiss: alarm.autoDismiss ?? false,
+      dismissAfter:alarm.dismissAfter ?? 60,
+      openUrl:     alarm.openUrl     || '',
+      openDevice:  alarm.openDevice  || 'phone',
+      days:        alarm.days        || [],
+      sound:       alarm.sound       || 'alarm-default',
+      routineStep: alarm.routineStep || '',
+    });
+  };
+
+  // ── Save edited alarm ──────────────────────────────────────────
+  const handleEditSave = async () => {
+    if (!editForm.time) return;
+    setEditSaving(true);
+    await updateAlarm(editingId, editForm);
+    setEditingId(null);
+    setEditForm(null);
+    setEditSaving(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm(null);
   };
 
   return (
@@ -92,104 +226,21 @@ export default function Alarms() {
 
       <div className="page-header">
         <h1 className="page-title">Alarms</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-primary" onClick={() => { setShowForm(!showForm); setEditingId(null); }}>
           <i className="ti ti-plus" /> New alarm
         </button>
       </div>
 
       {/* ── Add alarm form ───────────────────────────────────────── */}
       {showForm && (
-        <div className="alarm-form card">
-          <h3 className="form-title">New alarm</h3>
-
-          <div className="form-grid">
-            <div className="form-field">
-              <label>Time</label>
-              <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
-            </div>
-            <div className="form-field">
-              <label>Label</label>
-              <input type="text" value={form.label} placeholder="Morning protocol..."
-                onChange={(e) => set('label', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label>Days</label>
-            <div className="day-pills">
-              {DAYS.map((d) => (
-                <button key={d}
-                  className={`day-pill ${form.days.includes(d) ? 'active' : ''}`}
-                  onClick={() => toggleDay(d)}>{d}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-field">
-              <label>Dismiss mode</label>
-              <div className="radio-group">
-                <label className="radio-opt">
-                  <input type="radio" checked={!form.autoDismiss}
-                    onChange={() => set('autoDismiss', false)} />
-                  Button dismiss
-                </label>
-                <label className="radio-opt">
-                  <input type="radio" checked={form.autoDismiss}
-                    onChange={() => set('autoDismiss', true)} />
-                  Auto-dismiss
-                </label>
-              </div>
-            </div>
-            {form.autoDismiss && (
-              <div className="form-field">
-                <label>Auto-dismiss after (seconds)</label>
-                <input type="number" value={form.dismissAfter} min={10} max={300}
-                  onChange={(e) => set('dismissAfter', parseInt(e.target.value))} />
-              </div>
-            )}
-          </div>
-
-          <div className="form-grid">
-            <div className="form-field">
-              <label>Open URL on dismiss</label>
-              <input type="url" value={form.openUrl} placeholder="https://..."
-                onChange={(e) => set('openUrl', e.target.value)} />
-            </div>
-            <div className="form-field">
-              <label>Open on device</label>
-              <select value={form.openDevice} onChange={(e) => set('openDevice', e.target.value)}>
-                {DEVICES.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-field">
-              <label>Sound</label>
-              <div className="sound-selector">
-                <select value={form.sound} onChange={(e) => set('sound', e.target.value)}>
-                  {SOUNDS.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
-                </select>
-                <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)} title="Preview sound">
-                  <i className="ti ti-player-play" /> Preview
-                </button>
-              </div>
-            </div>
-            <div className="form-field">
-              <label>Routine step label (optional)</label>
-              <input type="text" value={form.routineStep} placeholder="e.g. Wake up"
-                onChange={(e) => set('routineStep', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button className="btn" onClick={() => setShowForm(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save alarm'}
-            </button>
-          </div>
-        </div>
+        <AlarmForm
+          title="New alarm"
+          form={form}
+          setForm={setForm}
+          onSave={handleSave}
+          onCancel={() => setShowForm(false)}
+          saving={saving}
+        />
       )}
 
       {/* ── Alarm list ───────────────────────────────────────────── */}
@@ -203,48 +254,65 @@ export default function Alarms() {
       ) : (
         <div className="alarm-list">
           {alarms.map((alarm) => (
-            <div key={alarm.id} className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
-              <div className="alarm-time-block">
-                <div className="alarm-time">{alarm.time}</div>
-                <div className="alarm-label">{alarm.label || 'Untitled alarm'}</div>
-                <div className="alarm-days">
-                  {(alarm.days || []).map((d) => <span key={d} className="day-tag">{d}</span>)}
-                </div>
-                {alarm.enabled && countdowns[alarm.id] && (
-                  <div className="alarm-countdown">
-                    <i className="ti ti-clock" /> {countdowns[alarm.id]}
-                  </div>
-                )}
-              </div>
-
-              <div className="alarm-meta">
-                {alarm.openUrl && (
-                  <div className="alarm-url">
-                    <i className="ti ti-external-link" />
-                    <span>{alarm.openUrl} · {alarm.openDevice}</span>
-                  </div>
-                )}
-                <div className="alarm-tags">
-                  <span className="badge badge-gray">
-                    {alarm.autoDismiss ? `Auto-dismiss ${alarm.dismissAfter}s` : 'Button dismiss'}
-                  </span>
-                  <span className="badge badge-gray">
-                    {SOUNDS.find(s => s.id === alarm.sound)?.emoji || '🔔'} {SOUNDS.find(s => s.id === alarm.sound)?.label || alarm.sound}
-                  </span>
-                </div>
-              </div>
-
-              <div className="alarm-controls">
-                <button
-                  className={`toggle ${alarm.enabled ? 'on' : ''}`}
-                  onClick={() => updateAlarm(alarm.id, { enabled: !alarm.enabled })}
-                  aria-label="Toggle alarm"
+            <div key={alarm.id}>
+              {/* ── Edit form (inline, replaces the card) ── */}
+              {editingId === alarm.id ? (
+                <AlarmForm
+                  title={`Edit — ${alarm.label || alarm.time}`}
+                  form={editForm}
+                  setForm={setEditForm}
+                  onSave={handleEditSave}
+                  onCancel={cancelEdit}
+                  saving={editSaving}
                 />
-                <button className="icon-btn" onClick={() => deleteAlarm(alarm.id)}
-                  title="Delete alarm">
-                  <i className="ti ti-trash" />
-                </button>
-              </div>
+              ) : (
+                /* ── Normal alarm row ── */
+                <div className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
+                  <div className="alarm-time-block">
+                    <div className="alarm-time">{alarm.time}</div>
+                    <div className="alarm-label">{alarm.label || 'Untitled alarm'}</div>
+                    <div className="alarm-days">
+                      {(alarm.days || []).map((d) => <span key={d} className="day-tag">{d}</span>)}
+                    </div>
+                    {alarm.enabled && countdowns[alarm.id] && (
+                      <div className="alarm-countdown">
+                        <i className="ti ti-clock" /> {countdowns[alarm.id]}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="alarm-meta">
+                    {alarm.openUrl && (
+                      <div className="alarm-url">
+                        <i className="ti ti-external-link" />
+                        <span>{alarm.openUrl} · {alarm.openDevice}</span>
+                      </div>
+                    )}
+                    <div className="alarm-tags">
+                      <span className="badge badge-gray">
+                        {alarm.autoDismiss ? `Auto-dismiss ${alarm.dismissAfter}s` : 'Button dismiss'}
+                      </span>
+                      <span className="badge badge-gray">
+                        {SOUNDS.find(s => s.id === alarm.sound)?.emoji || '🔔'} {SOUNDS.find(s => s.id === alarm.sound)?.label || alarm.sound}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="alarm-controls">
+                    <button
+                      className={`toggle ${alarm.enabled ? 'on' : ''}`}
+                      onClick={() => updateAlarm(alarm.id, { enabled: !alarm.enabled })}
+                      aria-label="Toggle alarm"
+                    />
+                    <button className="icon-btn" onClick={() => startEdit(alarm)} title="Edit alarm">
+                      <i className="ti ti-pencil" />
+                    </button>
+                    <button className="icon-btn" onClick={() => deleteAlarm(alarm.id)} title="Delete alarm">
+                      <i className="ti ti-trash" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
