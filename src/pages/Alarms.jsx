@@ -1,28 +1,30 @@
-// src/pages/Alarms.jsx
-import { useState } from 'react';
-import { useAuth }       from '../hooks/useAuth';
-import { useAlarms }     from '../hooks/useAlarms';
-import { useAlarmTimer } from '../hooks/useAlarmTimer';
+// src/pages/Alarms.jsx  — unified Alarms + Scheduled Links
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth }           from '../hooks/useAuth';
+import { useAlarms }         from '../hooks/useAlarms';
+import { useAlarmTimer }     from '../hooks/useAlarmTimer';
+import { useScheduledLinks } from '../hooks/useScheduledLinks';
 import './Alarms.css';
 
-const DAYS   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const SOUNDS = [
-  { id: 'alarm-default',      label: 'Default',       emoji: '🔔' },
-  { id: 'alarm-gentle',       label: 'Gentle',        emoji: '🌅' },
-  { id: 'alarm-military',     label: 'Military',      emoji: '🎖️' },
-  { id: 'chime',              label: 'Chime',         emoji: '🎵' },
-  { id: 'alarm-classic',      label: 'Classic Bell',  emoji: '⏰' },
-  { id: 'alarm-digital',      label: 'Digital Beep',  emoji: '📟' },
-  { id: 'alarm-nature',       label: 'Nature',        emoji: '🌿' },
-  { id: 'alarm-motivational', label: 'Motivational',  emoji: '💪' },
-  { id: 'alarm-piano',        label: 'Piano',         emoji: '🎹' },
-  { id: 'alarm-cosmic',       label: 'Cosmic',        emoji: '🚀' },
-  { id: 'alarm-marimba',      label: 'Marimba',       emoji: '🪘' },
-  { id: 'alarm-pulse',        label: 'Pulse',         emoji: '⚡' },
+/* ─── Constants ─────────────────────────────────────────────────── */
+const DAYS    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SOUNDS  = [
+  { id: 'alarm-default',      label: 'Default',      emoji: '🔔' },
+  { id: 'alarm-gentle',       label: 'Gentle',       emoji: '🌅' },
+  { id: 'alarm-military',     label: 'Military',     emoji: '🎖️' },
+  { id: 'chime',              label: 'Chime',        emoji: '🎵' },
+  { id: 'alarm-classic',      label: 'Classic Bell', emoji: '⏰' },
+  { id: 'alarm-digital',      label: 'Digital Beep', emoji: '📟' },
+  { id: 'alarm-nature',       label: 'Nature',       emoji: '🌿' },
+  { id: 'alarm-motivational', label: 'Motivational', emoji: '💪' },
+  { id: 'alarm-piano',        label: 'Piano',        emoji: '🎹' },
+  { id: 'alarm-cosmic',       label: 'Cosmic',       emoji: '🚀' },
+  { id: 'alarm-marimba',      label: 'Marimba',      emoji: '🪘' },
+  { id: 'alarm-pulse',        label: 'Pulse',        emoji: '⚡' },
 ];
 const DEVICES = ['phone','computer','all'];
 
-const EMPTY = {
+const EMPTY_ALARM = {
   time: '05:30', label: '', enabled: true,
   autoDismiss: false, dismissAfter: 60,
   openUrl: '', openDevice: 'phone',
@@ -30,60 +32,91 @@ const EMPTY = {
   sound: 'alarm-default', routineStep: '',
 };
 
-// ── Shared alarm form used for both Add and Edit ──────────────────
+const EMPTY_LINK = {
+  label: '', url: '', time: '09:00',
+  days: ['Mon','Tue','Wed','Thu','Fri'],
+  device: 'phone', enabled: true,
+};
+
+/* ─── Helpers ────────────────────────────────────────────────────── */
+function previewSound(soundId) {
+  const ext = ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
+  const audio = new Audio(`/sounds/${soundId}.${ext}`);
+  audio.volume = 0.7;
+  audio.play().catch(() => {});
+  setTimeout(() => { audio.pause(); audio.currentTime = 0; }, 4000);
+}
+
+function msUntilNextFire(timeStr, days) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  const now = new Date();
+  const candidate = new Date(now);
+  candidate.setHours(h, m, 0, 0);
+  if (candidate <= now) candidate.setDate(candidate.getDate() + 1);
+  if (days && days.length > 0) {
+    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    for (let i = 0; i < 8; i++) {
+      const d = new Date(candidate);
+      d.setDate(d.getDate() + i);
+      if (days.includes(DAY_NAMES[d.getDay()])) return d - now;
+    }
+    return null;
+  }
+  return candidate - now;
+}
+
+function formatCountdown(ms) {
+  if (ms == null || ms < 0) return null;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+/* ─── Alarm Form ─────────────────────────────────────────────────── */
 function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-  const previewSound = (soundId) => {
-    const ext = ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
-    const audio = new Audio(`/sounds/${soundId}.${ext}`);
-    audio.volume = 0.7;
-    audio.play().catch(() => {});
-    setTimeout(() => { audio.pause(); audio.currentTime = 0; }, 4000);
-  };
-
-  const toggleDay = (d) =>
-    set('days', form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const toggleDay = d =>
+    set('days', form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d]);
 
   return (
     <div className="alarm-form card">
       <h3 className="form-title">{title}</h3>
-
       <div className="form-grid">
         <div className="form-field">
           <label>Time</label>
-          <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
+          <input type="time" value={form.time} onChange={e => set('time', e.target.value)} />
         </div>
         <div className="form-field">
           <label>Label</label>
           <input type="text" value={form.label} placeholder="Morning protocol..."
-            onChange={(e) => set('label', e.target.value)} />
+            onChange={e => set('label', e.target.value)} />
         </div>
       </div>
-
       <div className="form-field">
         <label>Days</label>
         <div className="day-pills">
-          {DAYS.map((d) => (
-            <button key={d}
-              className={`day-pill ${form.days.includes(d) ? 'active' : ''}`}
+          {DAYS.map(d => (
+            <button key={d} className={`day-pill ${form.days.includes(d) ? 'active' : ''}`}
               onClick={() => toggleDay(d)}>{d}</button>
           ))}
         </div>
       </div>
-
       <div className="form-grid">
         <div className="form-field">
           <label>Dismiss mode</label>
           <div className="radio-group">
             <label className="radio-opt">
-              <input type="radio" checked={!form.autoDismiss}
-                onChange={() => set('autoDismiss', false)} />
+              <input type="radio" checked={!form.autoDismiss} onChange={() => set('autoDismiss', false)} />
               Button dismiss
             </label>
             <label className="radio-opt">
-              <input type="radio" checked={form.autoDismiss}
-                onChange={() => set('autoDismiss', true)} />
+              <input type="radio" checked={form.autoDismiss} onChange={() => set('autoDismiss', true)} />
               Auto-dismiss
             </label>
           </div>
@@ -92,33 +125,31 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
           <div className="form-field">
             <label>Auto-dismiss after (seconds)</label>
             <input type="number" value={form.dismissAfter} min={10} max={300}
-              onChange={(e) => set('dismissAfter', parseInt(e.target.value))} />
+              onChange={e => set('dismissAfter', parseInt(e.target.value))} />
           </div>
         )}
       </div>
-
       <div className="form-grid">
         <div className="form-field">
           <label>Open URL on dismiss</label>
           <input type="url" value={form.openUrl} placeholder="https://..."
-            onChange={(e) => set('openUrl', e.target.value)} />
+            onChange={e => set('openUrl', e.target.value)} />
         </div>
         <div className="form-field">
           <label>Open on device</label>
-          <select value={form.openDevice} onChange={(e) => set('openDevice', e.target.value)}>
-            {DEVICES.map((d) => <option key={d} value={d}>{d}</option>)}
+          <select value={form.openDevice} onChange={e => set('openDevice', e.target.value)}>
+            {DEVICES.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
       </div>
-
       <div className="form-grid">
         <div className="form-field">
           <label>Sound</label>
           <div className="sound-selector">
-            <select value={form.sound} onChange={(e) => set('sound', e.target.value)}>
-              {SOUNDS.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
+            <select value={form.sound} onChange={e => set('sound', e.target.value)}>
+              {SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
             </select>
-            <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)} title="Preview sound">
+            <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)}>
               <i className="ti ti-player-play" /> Preview
             </button>
           </div>
@@ -126,10 +157,9 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
         <div className="form-field">
           <label>Routine step label (optional)</label>
           <input type="text" value={form.routineStep} placeholder="e.g. Wake up"
-            onChange={(e) => set('routineStep', e.target.value)} />
+            onChange={e => set('routineStep', e.target.value)} />
         </div>
       </div>
-
       <div className="form-actions">
         <button className="btn" onClick={onCancel}>Cancel</button>
         <button className="btn btn-primary" onClick={onSave} disabled={saving}>
@@ -140,67 +170,193 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
   );
 }
 
-// ── Main Alarms page ──────────────────────────────────────────────
+/* ─── Link Form ──────────────────────────────────────────────────── */
+function LinkForm({ title, form, setForm, onSave, onCancel, saving }) {
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const toggleDay = d =>
+    set('days', form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d]);
+
+  return (
+    <div className="alarm-form card">
+      <h3 className="form-title">{title}</h3>
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Label</label>
+          <input type="text" value={form.label} placeholder="e.g. Morning news, Workout video..."
+            onChange={e => set('label', e.target.value)} />
+        </div>
+        <div className="form-field">
+          <label>URL</label>
+          <input type="url" value={form.url} placeholder="https://..."
+            onChange={e => set('url', e.target.value)} />
+        </div>
+      </div>
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Time</label>
+          <input type="time" value={form.time} onChange={e => set('time', e.target.value)} />
+        </div>
+        <div className="form-field">
+          <label>Open on device</label>
+          <select value={form.device} onChange={e => set('device', e.target.value)}>
+            {DEVICES.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="form-field">
+        <label>Days</label>
+        <div className="day-pills">
+          {DAYS.map(d => (
+            <button key={d} className={`day-pill ${form.days.includes(d) ? 'active' : ''}`}
+              onClick={() => toggleDay(d)}>{d}</button>
+          ))}
+        </div>
+      </div>
+      <div className="form-actions">
+        <button className="btn" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save link'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Client-side link timer ─────────────────────────────────────── */
+function useLinkTimer(links) {
+  const firedRef = useRef(new Set());
+  const [linkCountdowns, setLinkCountdowns] = useState({});
+
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const todayName = DAY_NAMES[now.getDay()];
+      const nowH = now.getHours();
+      const nowM = now.getMinutes();
+      const key = `${nowH}:${nowM.toString().padStart(2,'0')}`;
+
+      // Reset fired set each minute
+      if (now.getSeconds() === 0) firedRef.current.clear();
+
+      links.forEach(link => {
+        if (!link.enabled || !link.url || !link.time) return;
+        const fireKey = `${link.id}-${key}`;
+        if (firedRef.current.has(fireKey)) return;
+
+        const [lh, lm] = link.time.split(':').map(Number);
+        if (nowH !== lh || nowM !== lm) return;
+
+        const days = link.days || [];
+        if (days.length > 0 && !days.includes(todayName)) return;
+
+        firedRef.current.add(fireKey);
+        // Open the URL
+        window.open(link.url, '_blank', 'noopener');
+      });
+
+      // Update countdowns
+      const cd = {};
+      links.forEach(link => {
+        if (!link.enabled) return;
+        const ms = msUntilNextFire(link.time, link.days);
+        if (ms != null) cd[link.id] = formatCountdown(ms);
+      });
+      setLinkCountdowns(cd);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [links]);
+
+  return { linkCountdowns };
+}
+
+/* ─── Main unified page ──────────────────────────────────────────── */
 export default function Alarms() {
-  const { user }   = useAuth();
-  const { alarms, loading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
+  const { user } = useAuth();
+  const { alarms, loading: alarmsLoading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
+  const { links,  loading: linksLoading,  addLink,  updateLink,  deleteLink  } = useScheduledLinks(user?.uid);
   const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
+  const { linkCountdowns } = useLinkTimer(links);
 
-  const [showForm, setShowForm]   = useState(false);
-  const [form, setForm]           = useState(EMPTY);
-  const [saving, setSaving]       = useState(false);
+  const [tab, setTab] = useState('alarms'); // 'alarms' | 'links'
 
-  // Edit state
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm]   = useState(null);
-  const [editSaving, setEditSaving] = useState(false);
+  // ── Alarm add/edit state ──────────────────────────────────────────
+  const [showAlarmForm, setShowAlarmForm] = useState(false);
+  const [alarmForm, setAlarmForm]         = useState(EMPTY_ALARM);
+  const [alarmSaving, setAlarmSaving]     = useState(false);
+  const [editAlarmId, setEditAlarmId]     = useState(null);
+  const [editAlarmForm, setEditAlarmForm] = useState(null);
+  const [editAlarmSaving, setEditAlarmSaving] = useState(false);
 
-  // ── Add new alarm ──────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!form.time) return;
-    setSaving(true);
-    await addAlarm(form);
-    setForm(EMPTY);
-    setShowForm(false);
-    setSaving(false);
+  // ── Link add/edit state ───────────────────────────────────────────
+  const [showLinkForm, setShowLinkForm]   = useState(false);
+  const [linkForm, setLinkForm]           = useState(EMPTY_LINK);
+  const [linkSaving, setLinkSaving]       = useState(false);
+  const [editLinkId, setEditLinkId]       = useState(null);
+  const [editLinkForm, setEditLinkForm]   = useState(null);
+  const [editLinkSaving, setEditLinkSaving] = useState(false);
+
+  // ── Alarm handlers ────────────────────────────────────────────────
+  const handleAddAlarm = async () => {
+    if (!alarmForm.time) return;
+    setAlarmSaving(true);
+    await addAlarm(alarmForm);
+    setAlarmForm(EMPTY_ALARM);
+    setShowAlarmForm(false);
+    setAlarmSaving(false);
   };
 
-  // ── Open edit form for an alarm ────────────────────────────────
-  const startEdit = (alarm) => {
-    setEditingId(alarm.id);
-    setEditForm({
-      time:        alarm.time        || '05:30',
-      label:       alarm.label       || '',
-      enabled:     alarm.enabled     ?? true,
-      autoDismiss: alarm.autoDismiss ?? false,
-      dismissAfter:alarm.dismissAfter ?? 60,
-      openUrl:     alarm.openUrl     || '',
-      openDevice:  alarm.openDevice  || 'phone',
-      days:        alarm.days        || [],
-      sound:       alarm.sound       || 'alarm-default',
-      routineStep: alarm.routineStep || '',
+  const startEditAlarm = alarm => {
+    setEditAlarmId(alarm.id);
+    setEditAlarmForm({
+      time: alarm.time || '05:30', label: alarm.label || '',
+      enabled: alarm.enabled ?? true, autoDismiss: alarm.autoDismiss ?? false,
+      dismissAfter: alarm.dismissAfter ?? 60, openUrl: alarm.openUrl || '',
+      openDevice: alarm.openDevice || 'phone', days: alarm.days || [],
+      sound: alarm.sound || 'alarm-default', routineStep: alarm.routineStep || '',
     });
   };
 
-  // ── Save edited alarm ──────────────────────────────────────────
-  const handleEditSave = async () => {
-    if (!editForm.time) return;
-    setEditSaving(true);
-    await updateAlarm(editingId, editForm);
-    setEditingId(null);
-    setEditForm(null);
-    setEditSaving(false);
+  const handleSaveAlarmEdit = async () => {
+    if (!editAlarmForm.time) return;
+    setEditAlarmSaving(true);
+    await updateAlarm(editAlarmId, editAlarmForm);
+    setEditAlarmId(null); setEditAlarmForm(null); setEditAlarmSaving(false);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditForm(null);
+  // ── Link handlers ─────────────────────────────────────────────────
+  const handleAddLink = async () => {
+    if (!linkForm.url || !linkForm.time) return;
+    setLinkSaving(true);
+    await addLink(linkForm);
+    setLinkForm(EMPTY_LINK);
+    setShowLinkForm(false);
+    setLinkSaving(false);
+  };
+
+  const startEditLink = link => {
+    setEditLinkId(link.id);
+    setEditLinkForm({
+      label: link.label || '', url: link.url || '',
+      time: link.time || '09:00', days: link.days || [],
+      device: link.device || 'phone', enabled: link.enabled ?? true,
+    });
+  };
+
+  const handleSaveLinkEdit = async () => {
+    if (!editLinkForm.url || !editLinkForm.time) return;
+    setEditLinkSaving(true);
+    await updateLink(editLinkId, editLinkForm);
+    setEditLinkId(null); setEditLinkForm(null); setEditLinkSaving(false);
   };
 
   return (
     <div className="page-wrap">
 
-      {/* ── Alarm Firing Overlay ─────────────────────────────────── */}
+      {/* ── Alarm Firing Overlay ────────────────────────────────── */}
       {firingAlarm && (
         <div className="alarm-overlay">
           <div className="alarm-firing-card">
@@ -224,98 +380,210 @@ export default function Alarms() {
         </div>
       )}
 
+      {/* ── Page header ─────────────────────────────────────────── */}
       <div className="page-header">
-        <h1 className="page-title">Alarms</h1>
-        <button className="btn btn-primary" onClick={() => { setShowForm(!showForm); setEditingId(null); }}>
-          <i className="ti ti-plus" /> New alarm
+        <h1 className="page-title">Alarms &amp; Links</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            if (tab === 'alarms') { setShowAlarmForm(v => !v); setEditAlarmId(null); }
+            else                  { setShowLinkForm(v => !v);  setEditLinkId(null);  }
+          }}
+        >
+          <i className="ti ti-plus" /> {tab === 'alarms' ? 'New alarm' : 'New link'}
         </button>
       </div>
 
-      {/* ── Add alarm form ───────────────────────────────────────── */}
-      {showForm && (
-        <AlarmForm
-          title="New alarm"
-          form={form}
-          setForm={setForm}
-          onSave={handleSave}
-          onCancel={() => setShowForm(false)}
-          saving={saving}
-        />
+      {/* ── Tabs ────────────────────────────────────────────────── */}
+      <div className="unified-tabs">
+        <button
+          className={`unified-tab ${tab === 'alarms' ? 'active' : ''}`}
+          onClick={() => setTab('alarms')}
+        >
+          <i className="ti ti-alarm" />
+          Alarms
+          {alarms.length > 0 && <span className="tab-badge">{alarms.length}</span>}
+        </button>
+        <button
+          className={`unified-tab ${tab === 'links' ? 'active' : ''}`}
+          onClick={() => setTab('links')}
+        >
+          <i className="ti ti-external-link" />
+          Scheduled Links
+          {links.length > 0 && <span className="tab-badge">{links.length}</span>}
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          ALARMS TAB
+      ══════════════════════════════════════════════════════════ */}
+      {tab === 'alarms' && (
+        <>
+          {showAlarmForm && (
+            <AlarmForm
+              title="New alarm"
+              form={alarmForm}
+              setForm={setAlarmForm}
+              onSave={handleAddAlarm}
+              onCancel={() => setShowAlarmForm(false)}
+              saving={alarmSaving}
+            />
+          )}
+
+          {alarmsLoading ? (
+            <div className="empty-state">Loading alarms...</div>
+          ) : alarms.length === 0 ? (
+            <div className="empty-state">
+              <i className="ti ti-alarm" style={{ fontSize: 40, color: 'var(--text3)' }} />
+              <p>No alarms yet. Create your first one.</p>
+            </div>
+          ) : (
+            <div className="alarm-list">
+              {alarms.map(alarm => (
+                <div key={alarm.id}>
+                  {editAlarmId === alarm.id ? (
+                    <AlarmForm
+                      title={`Edit — ${alarm.label || alarm.time}`}
+                      form={editAlarmForm}
+                      setForm={setEditAlarmForm}
+                      onSave={handleSaveAlarmEdit}
+                      onCancel={() => { setEditAlarmId(null); setEditAlarmForm(null); }}
+                      saving={editAlarmSaving}
+                    />
+                  ) : (
+                    <div className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
+                      <div className="alarm-time-block">
+                        <div className="alarm-time">{alarm.time}</div>
+                        <div className="alarm-label">{alarm.label || 'Untitled alarm'}</div>
+                        <div className="alarm-days">
+                          {(alarm.days || []).map(d => <span key={d} className="day-tag">{d}</span>)}
+                        </div>
+                        {alarm.enabled && countdowns[alarm.id] && (
+                          <div className="alarm-countdown">
+                            <i className="ti ti-clock" /> {countdowns[alarm.id]}
+                          </div>
+                        )}
+                      </div>
+                      <div className="alarm-meta">
+                        {alarm.openUrl && (
+                          <div className="alarm-url">
+                            <i className="ti ti-external-link" />
+                            <span>{alarm.openUrl} · {alarm.openDevice}</span>
+                          </div>
+                        )}
+                        <div className="alarm-tags">
+                          <span className="badge badge-gray">
+                            {alarm.autoDismiss ? `Auto-dismiss ${alarm.dismissAfter}s` : 'Button dismiss'}
+                          </span>
+                          <span className="badge badge-gray">
+                            {SOUNDS.find(s => s.id === alarm.sound)?.emoji || '🔔'}{' '}
+                            {SOUNDS.find(s => s.id === alarm.sound)?.label || alarm.sound}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="alarm-controls">
+                        <button className={`toggle ${alarm.enabled ? 'on' : ''}`}
+                          onClick={() => updateAlarm(alarm.id, { enabled: !alarm.enabled })}
+                          aria-label="Toggle alarm" />
+                        <button className="icon-btn" onClick={() => startEditAlarm(alarm)} title="Edit alarm">
+                          <i className="ti ti-pencil" />
+                        </button>
+                        <button className="icon-btn" onClick={() => deleteAlarm(alarm.id)} title="Delete alarm">
+                          <i className="ti ti-trash" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* ── Alarm list ───────────────────────────────────────────── */}
-      {loading ? (
-        <div className="empty-state">Loading alarms...</div>
-      ) : alarms.length === 0 ? (
-        <div className="empty-state">
-          <i className="ti ti-alarm" style={{ fontSize: 40, color: 'var(--text3)' }} />
-          <p>No alarms yet. Create your first one.</p>
-        </div>
-      ) : (
-        <div className="alarm-list">
-          {alarms.map((alarm) => (
-            <div key={alarm.id}>
-              {/* ── Edit form (inline, replaces the card) ── */}
-              {editingId === alarm.id ? (
-                <AlarmForm
-                  title={`Edit — ${alarm.label || alarm.time}`}
-                  form={editForm}
-                  setForm={setEditForm}
-                  onSave={handleEditSave}
-                  onCancel={cancelEdit}
-                  saving={editSaving}
-                />
-              ) : (
-                /* ── Normal alarm row ── */
-                <div className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
-                  <div className="alarm-time-block">
-                    <div className="alarm-time">{alarm.time}</div>
-                    <div className="alarm-label">{alarm.label || 'Untitled alarm'}</div>
-                    <div className="alarm-days">
-                      {(alarm.days || []).map((d) => <span key={d} className="day-tag">{d}</span>)}
-                    </div>
-                    {alarm.enabled && countdowns[alarm.id] && (
-                      <div className="alarm-countdown">
-                        <i className="ti ti-clock" /> {countdowns[alarm.id]}
-                      </div>
-                    )}
-                  </div>
+      {/* ══════════════════════════════════════════════════════════
+          SCHEDULED LINKS TAB
+      ══════════════════════════════════════════════════════════ */}
+      {tab === 'links' && (
+        <>
+          <p className="page-desc">
+            URLs open automatically on your chosen device at the scheduled time. The tab must be open for links to fire.
+          </p>
 
-                  <div className="alarm-meta">
-                    {alarm.openUrl && (
-                      <div className="alarm-url">
-                        <i className="ti ti-external-link" />
-                        <span>{alarm.openUrl} · {alarm.openDevice}</span>
-                      </div>
-                    )}
-                    <div className="alarm-tags">
-                      <span className="badge badge-gray">
-                        {alarm.autoDismiss ? `Auto-dismiss ${alarm.dismissAfter}s` : 'Button dismiss'}
-                      </span>
-                      <span className="badge badge-gray">
-                        {SOUNDS.find(s => s.id === alarm.sound)?.emoji || '🔔'} {SOUNDS.find(s => s.id === alarm.sound)?.label || alarm.sound}
-                      </span>
-                    </div>
-                  </div>
+          {showLinkForm && (
+            <LinkForm
+              title="New scheduled link"
+              form={linkForm}
+              setForm={setLinkForm}
+              onSave={handleAddLink}
+              onCancel={() => setShowLinkForm(false)}
+              saving={linkSaving}
+            />
+          )}
 
-                  <div className="alarm-controls">
-                    <button
-                      className={`toggle ${alarm.enabled ? 'on' : ''}`}
-                      onClick={() => updateAlarm(alarm.id, { enabled: !alarm.enabled })}
-                      aria-label="Toggle alarm"
-                    />
-                    <button className="icon-btn" onClick={() => startEdit(alarm)} title="Edit alarm">
-                      <i className="ti ti-pencil" />
-                    </button>
-                    <button className="icon-btn" onClick={() => deleteAlarm(alarm.id)} title="Delete alarm">
-                      <i className="ti ti-trash" />
-                    </button>
-                  </div>
-                </div>
-              )}
+          {linksLoading ? (
+            <div className="empty-state">Loading scheduled links...</div>
+          ) : links.length === 0 ? (
+            <div className="empty-state">
+              <i className="ti ti-external-link" style={{ fontSize: 40, color: 'var(--text3)' }} />
+              <p>No scheduled links yet. Add URLs that open automatically at set times.</p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="alarm-list">
+              {links.map(link => (
+                <div key={link.id}>
+                  {editLinkId === link.id ? (
+                    <LinkForm
+                      title={`Edit — ${link.label || link.url}`}
+                      form={editLinkForm}
+                      setForm={setEditLinkForm}
+                      onSave={handleSaveLinkEdit}
+                      onCancel={() => { setEditLinkId(null); setEditLinkForm(null); }}
+                      saving={editLinkSaving}
+                    />
+                  ) : (
+                    <div className={`alarm-row card ${link.enabled ? '' : 'disabled'}`}>
+                      <div className="alarm-time-block">
+                        <div className="alarm-time">{link.time}</div>
+                        <div className="alarm-label">{link.label || 'Untitled link'}</div>
+                        <div className="alarm-days">
+                          {(link.days || []).map(d => <span key={d} className="day-tag">{d}</span>)}
+                        </div>
+                        {link.enabled && linkCountdowns[link.id] && (
+                          <div className="alarm-countdown">
+                            <i className="ti ti-clock" /> {linkCountdowns[link.id]}
+                          </div>
+                        )}
+                      </div>
+                      <div className="alarm-meta">
+                        <div className="alarm-url">
+                          <i className="ti ti-external-link" />
+                          <span>{link.url}</span>
+                        </div>
+                        <div className="alarm-tags">
+                          <span className="badge badge-gray">
+                            <i className="ti ti-device-mobile" /> {link.device}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="alarm-controls">
+                        <button className={`toggle ${link.enabled ? 'on' : ''}`}
+                          onClick={() => updateLink(link.id, { enabled: !link.enabled })}
+                          aria-label="Toggle link" />
+                        <button className="icon-btn" onClick={() => startEditLink(link)} title="Edit link">
+                          <i className="ti ti-pencil" />
+                        </button>
+                        <button className="icon-btn" onClick={() => deleteLink(link.id)} title="Delete link">
+                          <i className="ti ti-trash" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

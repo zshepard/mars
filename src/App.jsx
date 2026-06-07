@@ -15,7 +15,7 @@ import Voice                                           from './pages/Voice';
 import AI                                              from './pages/AI';
 import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
-import ScheduledLinks                                  from './pages/ScheduledLinks';
+// ScheduledLinks merged into Alarms page
 import './styles/global.css';
 import './App.css';
 
@@ -33,7 +33,7 @@ function AppShell() {
           <Routes>
             <Route path="/"          element={<Dashboard />}   />
             <Route path="/alarms"    element={<Alarms />}      />
-            <Route path="/links"     element={<ScheduledLinks />} />
+            <Route path="/links"     element={<Navigate to="/alarms" replace />} />
             <Route path="/routines"  element={<Routines />}    />
             <Route path="/home"      element={<HomeControl />} />
             <Route path="/health"    element={<Health />}      />

@@ -4,8 +4,7 @@ import './Sidebar.css';
 
 const NAV = [
   { to: '/',          icon: 'ti-dashboard',     label: 'Dashboard'   },
-  { to: '/alarms',    icon: 'ti-alarm',          label: 'Alarms'      },
-  { to: '/links',     icon: 'ti-external-link',  label: 'Scheduled Links' },
+  { to: '/alarms',    icon: 'ti-alarm',          label: 'Alarms & Links' },
   { to: '/routines',  icon: 'ti-route',          label: 'Routines'    },
   { to: '/home',      icon: 'ti-home',           label: 'Home'        },
   { to: '/health',    icon: 'ti-heart-rate',     label: 'Health'      },
