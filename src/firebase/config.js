@@ -4,9 +4,20 @@ import { getAuth, GoogleAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLi
 import { getFirestore }                from 'firebase/firestore';
 import { getMessaging, isSupported }   from 'firebase/messaging';
 
+// Use the current hostname as authDomain so Google OAuth redirect stays on the same
+// origin — this prevents Android Chrome's storage partitioning from blocking sign-in.
+const resolvedAuthDomain = (() => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // Use the live domain for production, fall back to Firebase default for localhost
+    if (host !== 'localhost' && host !== '127.0.0.1') return host;
+  }
+  return process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'localhost';
+})();
+
 const firebaseConfig = {
   apiKey:            process.env.REACT_APP_FIREBASE_API_KEY            || 'offline-mode',
-  authDomain:        process.env.REACT_APP_FIREBASE_AUTH_DOMAIN        || 'localhost',
+  authDomain:        resolvedAuthDomain,
   projectId:         process.env.REACT_APP_FIREBASE_PROJECT_ID         || 'mars-offline',
   storageBucket:     process.env.REACT_APP_FIREBASE_STORAGE_BUCKET     || '',
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '',

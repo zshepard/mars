@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from '../firebase/config';
 
@@ -45,6 +45,12 @@ export function AuthProvider({ children }) {
     // Safety timeout — never hang on loading screen longer than 5 seconds
     const safetyTimer = setTimeout(() => setLoading(false), 5000);
 
+    // Handle mobile redirect result — fires after Google redirects back to the app.
+    // With authDomain set to the current hostname, sessionStorage is accessible.
+    getRedirectResult(auth).catch((err) => {
+      console.warn('getRedirectResult error (non-fatal):', err);
+    });
+
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (firebaseUser) {
@@ -67,12 +73,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithGoogle = async () => {
-    // Use popup for browser (works on any domain), redirect only for Android WebView
+    // On mobile (Android/iOS) use redirect — popup fails due to storage partitioning.
+    // authDomain is set to the current hostname so the redirect stays same-origin.
     const ua = navigator.userAgent || '';
-    const inWebView = ua.includes('MARS-App') || ua.includes('wv') || ua.includes('WebView');
-    if (inWebView) {
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    if (isMobile) {
       return signInWithRedirect(auth, googleProvider);
     }
+    // Desktop browser — popup works fine
     return signInWithPopup(auth, googleProvider);
   };
 
