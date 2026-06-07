@@ -1,23 +1,24 @@
 // src/pages/Alarms.jsx
 import { useState } from 'react';
-import { useAuth }  from '../hooks/useAuth';
-import { useAlarms } from '../hooks/useAlarms';
+import { useAuth }       from '../hooks/useAuth';
+import { useAlarms }     from '../hooks/useAlarms';
+import { useAlarmTimer } from '../hooks/useAlarmTimer';
 import './Alarms.css';
 
-const DAYS    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAYS   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SOUNDS = [
-  { id: 'alarm-default',     label: 'Default',       emoji: '🔔' },
-  { id: 'alarm-gentle',      label: 'Gentle',        emoji: '🌅' },
-  { id: 'alarm-military',    label: 'Military',      emoji: '🎖️' },
-  { id: 'chime',             label: 'Chime',         emoji: '🎵' },
-  { id: 'alarm-classic',    label: 'Classic Bell',  emoji: '⏰' },
-  { id: 'alarm-digital',    label: 'Digital Beep',  emoji: '📟' },
-  { id: 'alarm-nature',     label: 'Nature',        emoji: '🌿' },
-  { id: 'alarm-motivational', label: 'Motivational', emoji: '💪' },
-  { id: 'alarm-piano',      label: 'Piano',         emoji: '🎹' },
-  { id: 'alarm-cosmic',     label: 'Cosmic',        emoji: '🚀' },
-  { id: 'alarm-marimba',    label: 'Marimba',       emoji: '🪘' },
-  { id: 'alarm-pulse',      label: 'Pulse',         emoji: '⚡' },
+  { id: 'alarm-default',      label: 'Default',       emoji: '🔔' },
+  { id: 'alarm-gentle',       label: 'Gentle',        emoji: '🌅' },
+  { id: 'alarm-military',     label: 'Military',      emoji: '🎖️' },
+  { id: 'chime',              label: 'Chime',         emoji: '🎵' },
+  { id: 'alarm-classic',      label: 'Classic Bell',  emoji: '⏰' },
+  { id: 'alarm-digital',      label: 'Digital Beep',  emoji: '📟' },
+  { id: 'alarm-nature',       label: 'Nature',        emoji: '🌿' },
+  { id: 'alarm-motivational', label: 'Motivational',  emoji: '💪' },
+  { id: 'alarm-piano',        label: 'Piano',         emoji: '🎹' },
+  { id: 'alarm-cosmic',       label: 'Cosmic',        emoji: '🚀' },
+  { id: 'alarm-marimba',      label: 'Marimba',       emoji: '🪘' },
+  { id: 'alarm-pulse',        label: 'Pulse',         emoji: '⚡' },
 ];
 const DEVICES = ['phone','computer','all'];
 
@@ -30,11 +31,15 @@ const EMPTY = {
 };
 
 export default function Alarms() {
-  const { user }                          = useAuth();
+  const { user }   = useAuth();
   const { alarms, loading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
-  const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState(EMPTY);
-  const [saving, setSaving]               = useState(false);
+
+  // ── Client-side timer (fires even when notifications are blocked) ──
+  const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
+
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm]         = useState(EMPTY);
+  const [saving, setSaving]     = useState(false);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -60,6 +65,31 @@ export default function Alarms() {
 
   return (
     <div className="page-wrap">
+
+      {/* ── Alarm Firing Overlay ─────────────────────────────────── */}
+      {firingAlarm && (
+        <div className="alarm-overlay">
+          <div className="alarm-firing-card">
+            <div className="alarm-firing-icon">⏰</div>
+            <div className="alarm-firing-time">{firingAlarm.time}</div>
+            <div className="alarm-firing-label">{firingAlarm.label || 'Alarm'}</div>
+            {firingAlarm.openUrl && (
+              <div className="alarm-firing-url">
+                <i className="ti ti-external-link" /> {firingAlarm.openUrl}
+              </div>
+            )}
+            <div className="alarm-firing-actions">
+              <button className="btn btn-snooze" onClick={() => snoozeAlarm(firingAlarm)}>
+                <i className="ti ti-clock-pause" /> Snooze 5m
+              </button>
+              <button className="btn btn-dismiss" onClick={() => dismissAlarm(firingAlarm)}>
+                <i className="ti ti-check" /> Dismiss{firingAlarm.openUrl ? ' & Open' : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="page-header">
         <h1 className="page-title">Alarms</h1>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
@@ -67,7 +97,7 @@ export default function Alarms() {
         </button>
       </div>
 
-      {/* Add alarm form */}
+      {/* ── Add alarm form ───────────────────────────────────────── */}
       {showForm && (
         <div className="alarm-form card">
           <h3 className="form-title">New alarm</h3>
@@ -162,7 +192,7 @@ export default function Alarms() {
         </div>
       )}
 
-      {/* Alarm list */}
+      {/* ── Alarm list ───────────────────────────────────────────── */}
       {loading ? (
         <div className="empty-state">Loading alarms...</div>
       ) : alarms.length === 0 ? (
@@ -180,6 +210,11 @@ export default function Alarms() {
                 <div className="alarm-days">
                   {(alarm.days || []).map((d) => <span key={d} className="day-tag">{d}</span>)}
                 </div>
+                {alarm.enabled && countdowns[alarm.id] && (
+                  <div className="alarm-countdown">
+                    <i className="ti ti-clock" /> {countdowns[alarm.id]}
+                  </div>
+                )}
               </div>
 
               <div className="alarm-meta">

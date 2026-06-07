@@ -64,6 +64,16 @@
 }
 .alarm-label { font-size: 12px; color: var(--text2); margin-top: 2px; margin-bottom: 6px; }
 .alarm-days  { display: flex; gap: 4px; flex-wrap: wrap; }
+.alarm-countdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--green);
+  margin-top: 5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
 .day-tag     { font-size: 10px; padding: 2px 6px; border-radius: 20px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
 
 .alarm-meta  { flex: 1; }
@@ -121,6 +131,113 @@
   border-color: var(--green);
   transform: scale(1.03);
 }
+
+/* ── Alarm Firing Overlay ─────────────────────────────────────── */
+.alarm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: overlayIn 0.3s ease;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.alarm-firing-card {
+  background: var(--bg2);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  padding: 40px 48px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 0 60px rgba(0,255,136,0.25);
+  animation: cardPop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes cardPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.alarm-firing-icon {
+  font-size: 56px;
+  animation: shake 0.6s infinite;
+  display: block;
+  margin-bottom: 12px;
+}
+@keyframes shake {
+  0%,100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+
+.alarm-firing-time {
+  font-family: var(--font-head);
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: var(--green);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.alarm-firing-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.alarm-firing-url {
+  font-size: 11px;
+  color: var(--green);
+  opacity: 0.8;
+  margin-bottom: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alarm-firing-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.btn-snooze {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+}
+.btn-snooze:hover { border-color: var(--text2); color: var(--text); }
+
+.btn-dismiss {
+  background: var(--green);
+  border: 1px solid var(--green);
+  color: #000;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+}
+.btn-dismiss:hover { background: var(--green-light, #00ff99); transform: scale(1.03); }
 
 @media (max-width: 600px) {
   .form-grid { grid-template-columns: 1fr; }
