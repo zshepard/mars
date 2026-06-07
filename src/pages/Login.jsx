@@ -11,7 +11,7 @@ const isInWebView = () => {
 };
 
 export default function Login() {
-  const { loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, sendMagicLink, completeMagicLinkSignIn } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, sendMagicLink, completeMagicLinkSignIn } = useAuth();
   const navigate   = useNavigate();
   const location   = useLocation();
 
@@ -30,6 +30,11 @@ export default function Login() {
   const [signupError, setSignupError] = useState('');
   const [magicError, setMagicError]   = useState('');
   const [loading, setLoading]         = useState(false);
+
+  // Redirect to dashboard if already signed in (handles Google redirect return)
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle returning from a magic link email
   useEffect(() => {
