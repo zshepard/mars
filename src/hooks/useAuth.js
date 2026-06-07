@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from '../firebase/config';
 
@@ -67,9 +67,16 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const loginWithGoogle = () => {
-    // Use redirect (not popup) so Google Sign-In works inside WebView
-    return signInWithRedirect(auth, googleProvider);
+  const loginWithGoogle = async () => {
+    // Use popup for browser (works on any domain), redirect only for Android WebView
+    const ua = navigator.userAgent || '';
+    const inWebView = ua.includes('MARS-App') || ua.includes('wv') || ua.includes('WebView');
+    if (inWebView) {
+      return signInWithRedirect(auth, googleProvider);
+    }
+    // Popup flow — resolves immediately, no domain redirect issues
+    const result = await signInWithPopup(auth, googleProvider);
+    return result;
   };
 
   const sendMagicLink = async (email) => {
