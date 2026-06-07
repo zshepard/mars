@@ -14,12 +14,12 @@ export default function Settings() {
   const [theme, setTheme]                                  = useState('dark');
 
   return (
-    <div className="page-wrap">
+    <div className="settings-page page-enter">
       <h1 className="page-title">Settings</h1>
 
       {/* Account */}
-      <div className="settings-section card">
-        <div className="settings-label">Account</div>
+      <div className="settings-section">
+        <div className="settings-section-title">Account</div>
         <div className="settings-row">
           <div className="settings-row-left">
             {user?.photoURL && <img src={user.photoURL} alt="" className="settings-avatar" />}
@@ -33,8 +33,8 @@ export default function Settings() {
       </div>
 
       {/* Notifications */}
-      <div className="settings-section card">
-        <div className="settings-label">Notifications & Alarms</div>
+      <div className="settings-section">
+        <div className="settings-section-title">Notifications & Alarms</div>
         <div className="settings-row">
           <div>
             <div className="settings-val">Push notifications</div>
@@ -48,8 +48,8 @@ export default function Settings() {
       </div>
 
       {/* Voice */}
-      <div className="settings-section card">
-        <div className="settings-label">Voice Commands</div>
+      <div className="settings-section">
+        <div className="settings-section-title">Voice Commands</div>
         <div className="settings-row">
           <div>
             <div className="settings-val">Voice recognition</div>
@@ -69,8 +69,8 @@ export default function Settings() {
       </div>
 
       {/* URL / Device */}
-      <div className="settings-section card">
-        <div className="settings-label">URL & Device</div>
+      <div className="settings-section">
+        <div className="settings-section-title">URL & Device</div>
         <div className="settings-row">
           <div>
             <div className="settings-val">Default link open device</div>
@@ -86,8 +86,8 @@ export default function Settings() {
       </div>
 
       {/* System status */}
-      <div className="settings-section card">
-        <div className="settings-label">System</div>
+      <div className="settings-section">
+        <div className="settings-section-title">System</div>
         <div className="settings-row">
           <div className="settings-val">Connection</div>
           <span className={`badge ${isOnline ? 'badge-green' : 'badge-amber'}`}>

@@ -252,3 +252,25 @@
   transform: translateX(2px);
 }
 .user-dropdown button:active { transform: scale(0.97); }
+
+/* ── Clock improvements ───────────────────────────────────────── */
+.clock-ampm {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+.clock-date {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 480px) {
+  .clock-seconds { display: none; }
+  .clock-date { display: none; }
+  .clock-time { font-size: 1.1rem; }
+}
