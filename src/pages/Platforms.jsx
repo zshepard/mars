@@ -102,7 +102,21 @@ function detectDevice() {
   }
   info.touch    = navigator.maxTouchPoints > 0 ? `Yes (${navigator.maxTouchPoints} points)` : 'No';
   info.language = navigator.language || 'Unknown';
-  try { info.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { info.timezone = 'Unknown'; }
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Convert IANA timezone ID to a friendly display name
+    const tzFriendly = tz
+      .replace('America/New_York',      'Eastern Time (ET)')
+      .replace('America/Chicago',       'Central Time (CT)')
+      .replace('America/Denver',        'Mountain Time (MT)')
+      .replace('America/Los_Angeles',   'Pacific Time (PT)')
+      .replace('America/Phoenix',       'Arizona (MT no DST)')
+      .replace('America/Anchorage',     'Alaska Time (AKT)')
+      .replace('Pacific/Honolulu',      'Hawaii Time (HT)')
+      .replace('America/Puerto_Rico',   'Atlantic Time (AT)')
+      .replace(/_/g, ' ');
+    info.timezone = tzFriendly;
+  } catch { info.timezone = 'Unknown'; }
 
   return info;
 }
