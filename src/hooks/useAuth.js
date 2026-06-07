@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from '../firebase/config';
 
@@ -8,6 +8,25 @@ const AuthContext = createContext(null);
 
 const GUEST_KEY = 'mars-guest-mode';
 const GUEST_ID  = 'mars-local-user';
+
+// Write/update user profile in Firestore in the background (non-blocking)
+async function syncUserProfile(firebaseUser) {
+  try {
+    const ref  = doc(db, 'users', firebaseUser.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        uid:         firebaseUser.uid,
+        displayName: firebaseUser.displayName,
+        email:       firebaseUser.email,
+        photoURL:    firebaseUser.photoURL,
+        createdAt:   serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    console.warn('Firestore user doc sync (non-fatal):', err);
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
@@ -23,38 +42,18 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
 
-    // Safety timeout — if loading is still true after 8 seconds, force it false.
-    // Prevents infinite loading screen if Firebase/Firestore is slow or misconfigured.
-    const safetyTimer = setTimeout(() => {
-      setLoading(false);
-    }, 8000);
+    // Safety timeout — never hang on loading screen longer than 5 seconds
+    const safetyTimer = setTimeout(() => setLoading(false), 5000);
 
-    // Handle redirect result from Google Sign-In
-    getRedirectResult(auth).catch(() => {});
-
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (firebaseUser) {
-        // User signed in — upgrade from guest if applicable
         localStorage.removeItem(GUEST_KEY);
         setGuest(false);
-        // Wrap Firestore in try/catch so a DB error never blocks the auth flow
-        try {
-          const ref = doc(db, 'users', firebaseUser.uid);
-          const snap = await getDoc(ref);
-          if (!snap.exists()) {
-            await setDoc(ref, {
-              uid:         firebaseUser.uid,
-              displayName: firebaseUser.displayName,
-              email:       firebaseUser.email,
-              photoURL:    firebaseUser.photoURL,
-              createdAt:   serverTimestamp(),
-            });
-          }
-        } catch (err) {
-          console.warn('Firestore user doc error (non-fatal):', err);
-        }
+        // Set user IMMEDIATELY — don't wait for Firestore
         setUser({ ...firebaseUser, isGuest: false });
+        // Sync profile to Firestore in the background (non-blocking)
+        syncUserProfile(firebaseUser);
       } else {
         if (!wasGuest) setUser(null);
       }
@@ -74,9 +73,7 @@ export function AuthProvider({ children }) {
     if (inWebView) {
       return signInWithRedirect(auth, googleProvider);
     }
-    // Popup flow — resolves immediately, no domain redirect issues
-    const result = await signInWithPopup(auth, googleProvider);
-    return result;
+    return signInWithPopup(auth, googleProvider);
   };
 
   const sendMagicLink = async (email) => {
@@ -85,7 +82,6 @@ export function AuthProvider({ children }) {
       handleCodeInApp: true,
     };
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    // Save email to localStorage so we can complete sign-in when they return
     localStorage.setItem('mars-email-link-pending', email);
   };
 
