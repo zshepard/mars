@@ -1,6 +1,7 @@
 // src/hooks/useMars.js
 import { useState, useEffect, useCallback } from 'react';
-import { scheduleAlarm, cancelAlarm, queueHomeAction } from '../serviceWorkerRegistration';
+import { scheduleAlarm, cancelAlarm } from './useAlarms';
+import { queueHomeAction } from '../serviceWorkerRegistration';
 
 export function useMars() {
   const [isOnline,        setIsOnline]        = useState(navigator.onLine);

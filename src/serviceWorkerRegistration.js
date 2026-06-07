@@ -50,20 +50,6 @@ export function unregister() {
   }
 }
 
-export function scheduleAlarm({ alarm_id, fire_at, payload }) {
-  navigator.serviceWorker?.controller?.postMessage({
-    type: 'SCHEDULE_ALARM',
-    data: { alarm_id, fire_at, payload },
-  });
-}
-
-export function cancelAlarm(alarm_id) {
-  navigator.serviceWorker?.controller?.postMessage({
-    type: 'CANCEL_ALARM',
-    data: { alarm_id },
-  });
-}
-
 export function queueHomeAction(action) {
   navigator.serviceWorker?.controller?.postMessage({
     type: 'HOME_ACTION_OFFLINE',
