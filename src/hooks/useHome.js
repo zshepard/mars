@@ -38,6 +38,7 @@ function saveLocalRooms(rooms) {
 }
 
 export function useHome(uid) {
+  // Hard guard: never query Firestore without a real authenticated uid.
   const isGuest = !uid || uid === GUEST_ID;
   const [rooms, setRooms]     = useState(isGuest ? getLocalRooms() : DEFAULT_ROOMS);
   const [mood, setMoodState]  = useState('energized');

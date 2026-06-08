@@ -1,20 +1,50 @@
+// firestore.rules
+//
+// Server-side security rules — the authoritative enforcement layer for
+// per-user data isolation. These rules run on Google's servers and cannot
+// be bypassed by any client-side code.
+//
+// Rules:
+//   1. A user may only read/write their OWN documents (request.auth.uid == userId)
+//   2. Unauthenticated requests are denied everywhere
+//   3. No user can read or write another user's data
+//
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper: request must come from an authenticated user who owns this path
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
+
       match /alarms/{alarmId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /routines/{routineId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+      }
+      match /scheduledLinks/{linkId} {
+        allow read, write: if isOwner(userId);
       }
       match /homeRooms/{roomId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /healthLogs/{logId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
+      // Catch-all for any future sub-collections
+      match /{subcollection}/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Deny all other paths explicitly
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -48,6 +48,9 @@ export function cancelAlarm(alarm_id) {
 }
 
 export function useAlarms(uid) {
+  // Hard guard: never query Firestore without a real authenticated uid.
+  // This is a client-side safety net; Firestore Security Rules are the
+  // authoritative enforcement layer (see firestore.rules).
   const isGuest = !uid || uid === GUEST_ID;
   const local = useLocalCollection('mars-alarms', []);
   const [alarms, setAlarms]   = useState([]);

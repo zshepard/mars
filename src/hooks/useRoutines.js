@@ -64,6 +64,7 @@ function cancelRoutineTrigger(routineId) {
 }
 
 export function useRoutines(uid) {
+  // Hard guard: never query Firestore without a real authenticated uid.
   const isGuest = !uid || uid === GUEST_ID;
   const local = useLocalCollection('mars-routines', []);
   const [routines, setRoutines] = useState([]);

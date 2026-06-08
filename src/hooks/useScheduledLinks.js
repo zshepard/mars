@@ -11,6 +11,7 @@ import { useLocalCollection } from './useLocalStorage';
 const GUEST_ID = 'mars-local-user';
 
 export function useScheduledLinks(uid) {
+  // Hard guard: never query Firestore without a real authenticated uid.
   const isGuest = !uid || uid === GUEST_ID;
   const local = useLocalCollection('mars-scheduled-links', []);
   const [links, setLinks]     = useState([]);

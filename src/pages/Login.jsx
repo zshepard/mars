@@ -27,9 +27,11 @@ export default function Login() {
   const gsiMainRef   = useRef(null);
   const gsiSignupRef = useRef(null);
 
-  // Redirect to dashboard if already signed in
+  // Redirect to dashboard (or the page they were trying to reach) if already signed in.
+  // Guests are NOT redirected — they must sign in with a real account.
+  const from = location.state?.from?.pathname || '/';
   useEffect(() => {
-    if (user) navigate('/');
+    if (user && !user.isGuest) navigate(from, { replace: true });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize GSI and render native Google buttons
@@ -39,7 +41,7 @@ export default function Login() {
       setLoading(true);
       try {
         await loginWithGSI(response.credential);
-        navigate('/');
+        navigate(from, { replace: true });
       } catch (e) {
         console.error('GSI sign-in error:', e);
         setError('Google sign-in failed. Please try email/password.');
@@ -86,16 +88,20 @@ export default function Login() {
       return;
     }
     completeMagicLinkSignIn(savedEmail, window.location.href)
-      .then(() => navigate('/'))
+      .then(() => navigate(from, { replace: true }))
       .catch(() => {
         setScreen('magic');
         setMagicError('The sign-in link expired or is invalid. Request a new one.');
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Guest mode — guests stay on the login page; the dashboard is protected.
+  // continueAsGuest() is kept for local alarm scheduling without an account,
+  // but guests cannot navigate to the inner dashboard.
   const handleGuest = () => {
     continueAsGuest();
-    navigate('/');
+    // Do NOT navigate to '/' — ProtectedRoute will redirect guests back to /login.
+    // Instead, show a brief message so the user knows they need to sign in.
   };
 
   // Google sign-in handler
@@ -106,7 +112,7 @@ export default function Login() {
     setLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (e) {
       if (e.message !== 'Google sign-in cancelled') {
         setError('Google sign-in failed. Please try email/password.');
@@ -122,7 +128,7 @@ export default function Login() {
     setLoading(true);
     try {
       await loginWithEmail(email, password);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (e) {
       if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
         setError('No account found. Tap "Create an Account" below.');
@@ -144,7 +150,7 @@ export default function Login() {
     setLoading(true);
     try {
       await signUpWithEmail(signupEmail, signupPassword, name);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (e) {
       if (e.code === 'auth/email-already-in-use') {
         setSignupError('An account already exists for this email. Sign in instead.');
@@ -261,9 +267,8 @@ export default function Login() {
           Create an Account
         </button>
 
-        <button className="guest-btn" onClick={handleGuest}>
-          Continue without login
-        </button>
+        {/* Guest mode removed — dashboard requires a Google or email account.
+            Guests cannot access the inner dashboard (ProtectedRoute blocks them). */}
       </div>
 
       {/* ── MAGIC LINK SCREEN ── */}
