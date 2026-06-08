@@ -1,4 +1,9 @@
 // src/firebase/config.js
+//
+// Fix 2: authDomain is set to the current hostname (mars-lyart-alpha.vercel.app)
+// instead of the default Firebase domain (mars-d3745.firebaseapp.com).
+// This prevents Android Chrome storage-partitioning from blocking sign-in.
+//
 import { initializeApp }               from 'firebase/app';
 import { getAuth, GoogleAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { getFirestore }                from 'firebase/firestore';
@@ -10,9 +15,10 @@ const resolvedAuthDomain = (() => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     // Use the live domain for production, fall back to Firebase default for localhost
-    if (host !== 'localhost' && host !== '127.0.0.1') return host;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') return host;
   }
-  return process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'localhost';
+  // Localhost fallback — use env var or Firebase default domain
+  return process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'mars-d3745.firebaseapp.com';
 })();
 
 const firebaseConfig = {
@@ -24,13 +30,20 @@ const firebaseConfig = {
   appId:             process.env.REACT_APP_FIREBASE_APP_ID             || '1:000:web:000',
 };
 
-// Firebase will initialize even with placeholder values
-// Guest/offline mode won't make any Firestore calls
+console.info('[MARS Firebase] authDomain =', resolvedAuthDomain);
+
 const app = initializeApp(firebaseConfig);
 
 export const auth            = getAuth(app);
 export const db              = getFirestore(app);
 export const googleProvider  = new GoogleAuthProvider();
+
+// Ensure email + profile scopes are always requested
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+// Force account selection every time (prevents stale account auto-select)
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
 export { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink };
 export const VAPID_KEY       = process.env.REACT_APP_FIREBASE_VAPID_KEY || '';
 
