@@ -1,6 +1,6 @@
 // src/hooks/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from '../firebase/config';
 
@@ -8,6 +8,28 @@ const AuthContext = createContext(null);
 
 const GUEST_KEY = 'mars-guest-mode';
 const GUEST_ID  = 'mars-local-user';
+const GSI_CLIENT_ID = '656617062123-v0o86sbetu6hblb5cm0vs0sejs3dg3h9.apps.googleusercontent.com';
+
+// Initialize Google Identity Services — call this when the Login page mounts
+export function initGSI(onCredential) {
+  if (typeof window === 'undefined') return;
+  const tryInit = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GSI_CLIENT_ID,
+        callback: onCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+    }
+  };
+  // GSI script is async — wait for it if not yet loaded
+  if (window.google?.accounts?.id) {
+    tryInit();
+  } else {
+    window.addEventListener('load', tryInit, { once: true });
+  }
+}
 
 // Write/update user profile in Firestore in the background (non-blocking)
 async function syncUserProfile(firebaseUser) {
@@ -72,6 +94,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const loginWithGSI = async (idToken) => {
+    const credential = GoogleAuthProvider.credential(idToken);
+    return signInWithCredential(auth, credential);
+  };
+
   const loginWithGoogle = async () => {
     // On mobile (Android/iOS) use redirect — popup fails due to storage partitioning.
     // authDomain is set to the current hostname so the redirect stays same-origin.
@@ -123,7 +150,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, guest, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, logout, sendMagicLink, completeMagicLinkSignIn }}>
+    <AuthContext.Provider value={{ user, guest, loading, loginWithGoogle, loginWithGSI, loginWithEmail, signUpWithEmail, continueAsGuest, logout, sendMagicLink, completeMagicLinkSignIn }}>
       {children}
     </AuthContext.Provider>
   );

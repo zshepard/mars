@@ -378,3 +378,23 @@
   background: rgba(29, 158, 117, 0.15) !important;
   border-color: rgba(29, 158, 117, 0.5) !important;
 }
+
+/* GSI rendered button container */
+.gsi-btn-container {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 4px 0;
+}
+
+/* Hide fallback button when GSI button rendered successfully */
+.gsi-btn-container:not(:empty) + .google-btn--fallback {
+  display: none;
+}
+
+/* Show fallback when GSI container is empty */
+.google-btn--fallback {
+  display: flex;
+}

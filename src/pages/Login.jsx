@@ -1,21 +1,13 @@
 // src/pages/Login.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth, initGSI } from '../hooks/useAuth';
 import './Login.css';
 
-// Detect if running inside the MARS Android WebView
-const isInWebView = () => {
-  const ua = navigator.userAgent || '';
-  return ua.includes('MARS-App') || ua.includes('wv') || ua.includes('WebView');
-};
-
 export default function Login() {
-  const { user, loginWithGoogle, loginWithEmail, signUpWithEmail, continueAsGuest, sendMagicLink, completeMagicLinkSignIn } = useAuth();
+  const { user, loginWithGoogle, loginWithGSI, loginWithEmail, signUpWithEmail, continueAsGuest, sendMagicLink, completeMagicLinkSignIn } = useAuth();
   const navigate   = useNavigate();
   const location   = useLocation();
-
-  const inApp = isInWebView();
 
   // 'main' | 'signup' | 'magic'
   const [screen, setScreen]           = useState('main');
@@ -31,10 +23,57 @@ export default function Login() {
   const [magicError, setMagicError]   = useState('');
   const [loading, setLoading]         = useState(false);
 
-  // Redirect to dashboard if already signed in (handles Google redirect return)
+  // Refs for GSI rendered button containers
+  const gsiMainRef   = useRef(null);
+  const gsiSignupRef = useRef(null);
+
+  // Redirect to dashboard if already signed in
   useEffect(() => {
     if (user) navigate('/');
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initialize GSI and render native Google buttons
+  useEffect(() => {
+    const handleGSICredential = async (response) => {
+      setError('');
+      setLoading(true);
+      try {
+        await loginWithGSI(response.credential);
+        navigate('/');
+      } catch (e) {
+        console.error('GSI sign-in error:', e);
+        setError('Google sign-in failed. Please try email/password.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const renderGSIButtons = () => {
+      if (!window.google?.accounts?.id) return;
+      initGSI(handleGSICredential);
+      const opts = {
+        type: 'standard',
+        theme: 'filled_black',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        logo_alignment: 'left',
+        width: 320,
+      };
+      if (gsiMainRef.current) {
+        window.google.accounts.id.renderButton(gsiMainRef.current, opts);
+      }
+      if (gsiSignupRef.current) {
+        window.google.accounts.id.renderButton(gsiSignupRef.current, { ...opts, text: 'signup_with' });
+      }
+    };
+
+    // GSI script loads asynchronously — try immediately, retry after delay
+    renderGSIButtons();
+    const t1 = setTimeout(renderGSIButtons, 800);
+    const t2 = setTimeout(renderGSIButtons, 2000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle returning from a magic link email
   useEffect(() => {
@@ -42,7 +81,6 @@ export default function Login() {
     if (params.get('emailLink') !== '1') return;
     const savedEmail = localStorage.getItem('mars-email-link-pending');
     if (!savedEmail) {
-      // Ask user to enter their email to complete sign-in
       setScreen('magic');
       setMagicError('Enter the email address you used to request the sign-in link.');
       return;
@@ -60,11 +98,11 @@ export default function Login() {
     navigate('/');
   };
 
-  const handleGoogle = async () => {
+  // Fallback: if GSI button didn't render, use popup/redirect
+  const handleGoogleFallback = async () => {
     setError('');
     try {
       await loginWithGoogle();
-      // redirect flow — page navigates away automatically
     } catch (e) {
       setError('Google sign-in failed. Please try email/password.');
     }
@@ -181,8 +219,10 @@ export default function Login() {
 
         <div className="login-divider"><span>or</span></div>
 
-        {/* Google sign-in — popup works on both browser and mobile */}
-        <button className="google-btn" onClick={handleGoogle}>
+        {/* GSI rendered Google button — works natively on Android WebView */}
+        <div className="gsi-btn-container" ref={gsiMainRef} />
+        {/* Fallback button shown if GSI script didn't load */}
+        <button className="google-btn google-btn--fallback" onClick={handleGoogleFallback}>
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -207,7 +247,7 @@ export default function Login() {
         </button>
       </div>
 
-      {/* ── MAGIC LINK SCREEN (in-app Google sign-in via email link) ── */}
+      {/* ── MAGIC LINK SCREEN ── */}
       <div className={`login-card login-card--signup${screen === 'magic' ? ' login-card--visible' : ''}`}>
         <button className="back-btn" onClick={() => { setScreen('main'); setMagicError(''); setMagicSent(false); }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -320,9 +360,10 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Google sign-up — popup works on both browser and mobile */}
+        {/* GSI rendered Google button for sign-up */}
         <div className="login-divider"><span>or sign up with</span></div>
-        <button className="google-btn" onClick={handleGoogle}>
+        <div className="gsi-btn-container" ref={gsiSignupRef} />
+        <button className="google-btn google-btn--fallback" onClick={handleGoogleFallback}>
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
