@@ -419,17 +419,6 @@ export default function Alarms() {
       {/* ── Page header ─────────────────────────────────────────── */}
       <div className="page-header">
         <h1 className="page-title">Alarms &amp; Links</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (tab === 'alarms')     { setShowAlarmForm(v => !v);   setEditAlarmId(null); }
-            else if (tab === 'links') { setShowLinkForm(v => !v);    setEditLinkId(null);  }
-            else                     { setShowRoutineForm(v => !v); }
-          }}
-        >
-          <i className="ti ti-plus" />
-          {tab === 'alarms' ? 'New alarm' : tab === 'links' ? 'New link' : 'New routine'}
-        </button>
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────── */}
@@ -546,6 +535,14 @@ export default function Alarms() {
               ))}
             </div>
           )}
+          {/* ── Centered Add button below last alarm ── */}
+          {!showAlarmForm && (
+            <div className="add-item-centered">
+              <button className="add-custom-btn" onClick={() => { setShowAlarmForm(true); setEditAlarmId(null); }}>
+                <i className="ti ti-plus" /> New alarm
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -633,6 +630,14 @@ export default function Alarms() {
               ))}
             </div>
               )}
+          {/* ── Centered Add button below last link ── */}
+          {!showLinkForm && (
+            <div className="add-item-centered">
+              <button className="add-custom-btn" onClick={() => { setShowLinkForm(true); setEditLinkId(null); }}>
+                <i className="ti ti-plus" /> New link
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -766,6 +771,14 @@ export default function Alarms() {
                 </div>
                 </SwipeItem>
               ))}
+            </div>
+          )}
+          {/* ── Centered Add button below last routine ── */}
+          {!showRoutineForm && (
+            <div className="add-item-centered">
+              <button className="add-custom-btn" onClick={() => setShowRoutineForm(true)}>
+                <i className="ti ti-plus" /> New routine
+              </button>
             </div>
           )}
         </>

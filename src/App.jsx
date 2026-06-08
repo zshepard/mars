@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect }                         from 'react';
+import { useState, useEffect, useRef, useCallback }   from 'react';
 import { BrowserRouter, Routes, Route, Navigate }     from 'react-router-dom';
 import { AuthProvider }                                from './hooks/useAuth';
 import ProtectedRoute                                  from './components/ProtectedRoute';
@@ -24,11 +24,35 @@ function AppShell() {
   const isWebView = /MARS-App|wv|WebView/.test(navigator.userAgent) ||
     (navigator.userAgent.includes('Android') && /Version\/\d/.test(navigator.userAgent));
 
+  // ── Swipe-to-open/close sidebar ─────────────────────────────────
+  const touchStart = useRef(null);
+
+  const onTouchStart = useCallback((e) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = Math.abs(t.clientY - touchStart.current.y);
+    touchStart.current = null;
+    // Only register horizontal swipes (dy < 60px drift)
+    if (Math.abs(dx) < 50 || dy > 60) return;
+    if (dx > 0) setSidebarOpen(true);   // swipe right → open
+    else        setSidebarOpen(false);  // swipe left  → close
+  }, []);
+
   return (
-    <div className={`app-shell${isWebView ? ' mars-webview' : ''}`}>
+    <div
+      className={`app-shell${isWebView ? ' mars-webview' : ''}`}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <Topbar onMenuToggle={() => setSidebarOpen((p) => !p)} />
       <div className="app-body">
-        <Sidebar open={sidebarOpen} />
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="app-main">
           <Routes>
             <Route path="/"          element={<Dashboard />}   />

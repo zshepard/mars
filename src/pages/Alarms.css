@@ -26,6 +26,14 @@
   line-height: 1.5;
 }
 
+/* Centered add button below the last list item */
+.add-item-centered {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  padding-bottom: 8px;
+}
+
 /* ── Tabs ─────────────────────────────────────────────────────── */
 .unified-tabs {
   display: flex;
