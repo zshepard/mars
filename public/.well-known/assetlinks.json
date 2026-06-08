@@ -1,5 +1,6 @@
 [
   {
+    "_update_instructions": "SHA-256 fingerprint must be updated when Google Play App Signing replaces the key. New fingerprint: Play Console → Setup → App signing → App signing key certificate → SHA-256 certificate fingerprint. Also update ASSETLINKS_SHA256 in EAS Secrets.",
     "relation": [
       "delegate_permission/common.handle_all_urls",
       "delegate_permission/common.get_login_creds"
