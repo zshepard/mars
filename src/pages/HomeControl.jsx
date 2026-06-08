@@ -99,9 +99,43 @@ function CustomSettingRow({ setting, onUpdate, onDelete }) {
   );
 }
 
+/* ─── Room Link Row ─────────────────────────────────────────────────────── */
+function RoomLinkRow({ link, onUpdate, onDelete }) {
+  return (
+    <div className="room-link-row">
+      <input
+        className="room-link-label"
+        value={link.label}
+        onChange={(e) => onUpdate(link.id, 'label', e.target.value)}
+        placeholder="Link label"
+        maxLength={24}
+      />
+      <input
+        className="room-link-url"
+        type="url"
+        value={link.url}
+        onChange={(e) => onUpdate(link.id, 'url', e.target.value)}
+        placeholder="https://..."
+      />
+      <button
+        className="room-link-open"
+        title="Open link"
+        onClick={() => link.url && window.open(link.url, '_blank', 'noopener')}
+        disabled={!link.url}
+      >
+        <i className="ti ti-external-link" />
+      </button>
+      <button className="custom-setting-delete" onClick={() => onDelete(link.id)}>
+        <i className="ti ti-trash" />
+      </button>
+    </div>
+  );
+}
+
 /* ─── Room Card ─────────────────────────────────────────────────────────── */
-function RoomCard({ room, onUpdate, onDelete, onAddCustom, onUpdateCustom, onDeleteCustom }) {
+function RoomCard({ room, onUpdate, onDelete, onAddCustom, onUpdateCustom, onDeleteCustom, onAddLink, onUpdateLink, onDeleteLink }) {
   const [showCustom, setShowCustom] = useState(false);
+  const [showLinks, setShowLinks]   = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
@@ -164,6 +198,39 @@ function RoomCard({ room, onUpdate, onDelete, onAddCustom, onUpdateCustom, onDel
         </button>
       </div>
 
+      {/* Room Links */}
+      <div className="custom-settings-section">
+        <button
+          className="custom-settings-toggle"
+          onClick={() => setShowLinks((v) => !v)}
+        >
+          <i className={`ti ${showLinks ? 'ti-chevron-up' : 'ti-link'}`} />
+          Room Links
+          {room.roomLinks?.length > 0 && (
+            <span className="custom-count">{room.roomLinks.length}</span>
+          )}
+        </button>
+
+        {showLinks && (
+          <div className="custom-settings-panel">
+            {(room.roomLinks || []).map((lnk) => (
+              <RoomLinkRow
+                key={lnk.id}
+                link={lnk}
+                onUpdate={(lid, field, val) => onUpdateLink(room.id, lid, field, val)}
+                onDelete={(lid) => onDeleteLink(room.id, lid)}
+              />
+            ))}
+            <button
+              className="add-custom-btn"
+              onClick={() => onAddLink(room.id)}
+            >
+              <i className="ti ti-plus" /> Add Link
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Custom Settings */}
       <div className="custom-settings-section">
         <button
@@ -207,6 +274,7 @@ export default function HomeControl() {
     rooms, loading,
     addRoom, updateRoom, deleteRoom,
     addCustomSetting, updateCustomSetting, deleteCustomSetting,
+    addRoomLink, updateRoomLink, deleteRoomLink,
   } = useHome(user?.uid);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -242,6 +310,9 @@ export default function HomeControl() {
               onAddCustom={addCustomSetting}
               onUpdateCustom={updateCustomSetting}
               onDeleteCustom={deleteCustomSetting}
+              onAddLink={addRoomLink}
+              onUpdateLink={updateRoomLink}
+              onDeleteLink={deleteRoomLink}
             />
           ))}
         </div>

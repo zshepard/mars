@@ -181,6 +181,68 @@ export function useHome(uid) {
     );
   };
 
+  /* ── Add a URL link to a room ───────────────────────────────────────── */
+  const addRoomLink = async (roomId) => {
+    const newLink = {
+      id: `rl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label: '',
+      url: '',
+    };
+    const updated = rooms.map((r) =>
+      r.id === roomId
+        ? { ...r, roomLinks: [...(r.roomLinks || []), newLink] }
+        : r
+    );
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { roomLinks: room.roomLinks, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  /* ── Update a room link field ────────────────────────────────────────── */
+  const updateRoomLink = async (roomId, linkId, field, value) => {
+    const updated = rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      return {
+        ...r,
+        roomLinks: (r.roomLinks || []).map((lnk) =>
+          lnk.id === linkId ? { ...lnk, [field]: value } : lnk
+        ),
+      };
+    });
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { roomLinks: room.roomLinks, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  /* ── Delete a room link ─────────────────────────────────────────────── */
+  const deleteRoomLink = async (roomId, linkId) => {
+    const updated = rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      return {
+        ...r,
+        roomLinks: (r.roomLinks || []).filter((lnk) => lnk.id !== linkId),
+      };
+    });
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { roomLinks: room.roomLinks, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
   return {
     rooms,
     loading,
@@ -190,5 +252,8 @@ export function useHome(uid) {
     addCustomSetting,
     updateCustomSetting,
     deleteCustomSetting,
+    addRoomLink,
+    updateRoomLink,
+    deleteRoomLink,
   };
 }

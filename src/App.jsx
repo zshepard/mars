@@ -8,7 +8,7 @@ import Sidebar                                         from './components/Sideba
 import Login                                           from './pages/Login';
 import Dashboard                                       from './pages/Dashboard';
 import Alarms                                          from './pages/Alarms';
-import Routines                                        from './pages/Routines';
+// Routines merged into Alarms page as a tab
 import HomeControl                                     from './pages/HomeControl';
 import Health                                          from './pages/Health';
 import Voice                                           from './pages/Voice';
@@ -34,7 +34,7 @@ function AppShell() {
             <Route path="/"          element={<Dashboard />}   />
             <Route path="/alarms"    element={<Alarms />}      />
             <Route path="/links"     element={<Navigate to="/alarms" replace />} />
-            <Route path="/routines"  element={<Routines />}    />
+            <Route path="/routines"  element={<Navigate to="/alarms" replace />} />
             <Route path="/home"      element={<HomeControl />} />
             <Route path="/health"    element={<Health />}      />
             <Route path="/voice"     element={<Voice />}       />

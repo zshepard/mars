@@ -1,9 +1,10 @@
-// src/pages/Alarms.jsx  — unified Alarms + Scheduled Links
+// src/pages/Alarms.jsx  — unified Alarms + Scheduled Links + Routines
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth }           from '../hooks/useAuth';
 import { useAlarms }         from '../hooks/useAlarms';
 import { useAlarmTimer }     from '../hooks/useAlarmTimer';
 import { useScheduledLinks } from '../hooks/useScheduledLinks';
+import { useRoutines, DEFAULT_STEPS } from '../hooks/useRoutines';
 import './Alarms.css';
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -278,10 +279,11 @@ export default function Alarms() {
   const { user } = useAuth();
   const { alarms, loading: alarmsLoading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
   const { links,  loading: linksLoading,  addLink,  updateLink,  deleteLink  } = useScheduledLinks(user?.uid);
+  const { routines, loading: routinesLoading, addRoutine, updateRoutine, deleteRoutine } = useRoutines(user?.uid);
   const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
   const { linkCountdowns } = useLinkTimer(links);
 
-  const [tab, setTab] = useState('alarms'); // 'alarms' | 'links'
+  const [tab, setTab] = useState('alarms'); // 'alarms' | 'links' | 'routines'
 
   // ── Alarm add/edit state ──────────────────────────────────────────
   const [showAlarmForm, setShowAlarmForm] = useState(false);
@@ -298,6 +300,31 @@ export default function Alarms() {
   const [editLinkId, setEditLinkId]       = useState(null);
   const [editLinkForm, setEditLinkForm]   = useState(null);
   const [editLinkSaving, setEditLinkSaving] = useState(false);
+
+  // ── Routine add state ─────────────────────────────────────────────
+  const EMPTY_ROUTINE = {
+    name: '', type: 'morning',
+    days: ['Mon','Tue','Wed','Thu','Fri'],
+    triggerTime: '', sound: 'alarm-default',
+    openUrl: '', openDevice: 'phone',
+  };
+  const [showRoutineForm, setShowRoutineForm] = useState(false);
+  const [routineForm, setRoutineForm]         = useState(EMPTY_ROUTINE);
+  const [routineSaving, setRoutineSaving]     = useState(false);
+  const setR = (k, v) => setRoutineForm(p => ({ ...p, [k]: v }));
+  const toggleRoutineDay = (d) =>
+    setRoutineForm(p => ({
+      ...p,
+      days: p.days.includes(d) ? p.days.filter(x => x !== d) : [...p.days, d],
+    }));
+  const handleAddRoutine = async () => {
+    if (!routineForm.name) return;
+    setRoutineSaving(true);
+    await addRoutine(routineForm);
+    setRoutineForm(EMPTY_ROUTINE);
+    setShowRoutineForm(false);
+    setRoutineSaving(false);
+  };
 
   // ── Alarm handlers ────────────────────────────────────────────────
   const handleAddAlarm = async () => {
@@ -386,11 +413,13 @@ export default function Alarms() {
         <button
           className="btn btn-primary"
           onClick={() => {
-            if (tab === 'alarms') { setShowAlarmForm(v => !v); setEditAlarmId(null); }
-            else                  { setShowLinkForm(v => !v);  setEditLinkId(null);  }
+            if (tab === 'alarms')     { setShowAlarmForm(v => !v);   setEditAlarmId(null); }
+            else if (tab === 'links') { setShowLinkForm(v => !v);    setEditLinkId(null);  }
+            else                     { setShowRoutineForm(v => !v); }
           }}
         >
-          <i className="ti ti-plus" /> {tab === 'alarms' ? 'New alarm' : 'New link'}
+          <i className="ti ti-plus" />
+          {tab === 'alarms' ? 'New alarm' : tab === 'links' ? 'New link' : 'New routine'}
         </button>
       </div>
 
@@ -411,6 +440,14 @@ export default function Alarms() {
           <i className="ti ti-external-link" />
           Scheduled Links
           {links.length > 0 && <span className="tab-badge">{links.length}</span>}
+        </button>
+        <button
+          className={`unified-tab ${tab === 'routines' ? 'active' : ''}`}
+          onClick={() => setTab('routines')}
+        >
+          <i className="ti ti-route" />
+          Routines
+          {routines.length > 0 && <span className="tab-badge">{routines.length}</span>}
         </button>
       </div>
 
@@ -579,6 +616,139 @@ export default function Alarms() {
                       </div>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+              )}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          ROUTINES TAB
+      ══════════════════════════════════════════════════════════ */}
+      {tab === 'routines' && (
+        <>
+          <p className="page-desc">
+            Routines chain alarms, lights, sounds and URLs into automated morning or evening flows.
+          </p>
+
+          {showRoutineForm && (
+            <div className="alarm-form card" style={{ marginBottom: 20 }}>
+              <h3 className="form-title">New routine</h3>
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>Name</label>
+                  <input type="text" value={routineForm.name} placeholder="Morning protocol..."
+                    onChange={e => setR('name', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label>Type</label>
+                  <select value={routineForm.type} onChange={e => setR('type', e.target.value)}>
+                    <option value="morning">Morning</option>
+                    <option value="evening">Evening</option>
+                    <option value="workout">Workout</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Days</label>
+                <div className="day-pills">
+                  {DAYS.map(d => (
+                    <button key={d} className={`day-pill ${routineForm.days.includes(d) ? 'active' : ''}`}
+                      onClick={() => toggleRoutineDay(d)}>{d}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>Trigger time <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
+                  <input type="time" value={routineForm.triggerTime}
+                    onChange={e => setR('triggerTime', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label>Sound</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select value={routineForm.sound} onChange={e => setR('sound', e.target.value)} style={{ flex: 1 }}>
+                      {SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
+                    </select>
+                    <button className="btn" style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}
+                      onClick={() => previewSound(routineForm.sound)}>
+                      <i className="ti ti-player-play" /> Preview
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>Open URL on trigger <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
+                  <input type="url" value={routineForm.openUrl} placeholder="https://..."
+                    onChange={e => setR('openUrl', e.target.value)} />
+                </div>
+                <div className="form-field">
+                  <label>Open on device</label>
+                  <select value={routineForm.openDevice} onChange={e => setR('openDevice', e.target.value)}>
+                    {DEVICES.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-actions">
+                <button className="btn" onClick={() => { setShowRoutineForm(false); setRoutineForm(EMPTY_ROUTINE); }}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleAddRoutine} disabled={routineSaving}>
+                  {routineSaving ? 'Saving...' : 'Save routine'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {routinesLoading ? (
+            <div className="empty-state">Loading routines...</div>
+          ) : routines.length === 0 ? (
+            <div className="empty-state">
+              <i className="ti ti-route" style={{ fontSize: 40, color: 'var(--text3)' }} />
+              <p>No routines yet. Build your first automated flow.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {routines.map(r => (
+                <div key={r.id} className="card routine-card">
+                  <div className="routine-header">
+                    <div>
+                      <div className="routine-name">{r.name}</div>
+                      <div className="routine-meta">
+                        {r.triggerTime && (
+                          <span className="routine-time">
+                            <i className="ti ti-clock" /> {r.triggerTime}
+                          </span>
+                        )}
+                        <div className="routine-days">
+                          {(r.days || []).map(d => <span key={d} className="day-tag">{d}</span>)}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className={`badge ${r.active ? 'badge-green' : 'badge-gray'}`}>
+                        {r.active ? 'Active' : 'Paused'}
+                      </span>
+                      <button className={`toggle ${r.active ? 'on' : ''}`}
+                        onClick={() => updateRoutine(r.id, { active: !r.active })} />
+                      <button className="icon-btn" onClick={() => deleteRoutine(r.id)}>
+                        <i className="ti ti-trash" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flow-steps">
+                    {(r.steps || DEFAULT_STEPS).map((step, i) => (
+                      <div key={step.id} className="flow-step">
+                        <div className="step-num">{i + 1}</div>
+                        <i className={`ti ${step.icon}`} />
+                        <span>{step.label}</span>
+                        {i < (r.steps || DEFAULT_STEPS).length - 1 && (
+                          <i className="ti ti-arrow-right step-arrow" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
