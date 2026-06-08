@@ -14,14 +14,21 @@
 //   REACT_APP_FIREBASE_APP_ID      — Firebase app ID
 //
 // OAuth 2.0 flow implemented here:
-//   1. User clicks "Sign in with Google"
-//   2. On desktop: Firebase signInWithPopup() opens Google account picker
-//      On Android WebView: native bridge (window.__nativeGoogleSignIn) delegates
-//      to expo-auth-session which opens a Chrome Custom Tab
-//   3. Google returns an access_token (native) or id_token (popup/GSI)
-//   4. signInWithCredential() exchanges the token with Firebase Auth
-//   5. Firebase returns a verified user object with name, email, photoURL
-//   6. syncUserProfile() saves/updates the user record in Firestore:
+//   1. User taps "Sign in with Google"
+//   2. On Android WebView:
+//        native bridge (window.__nativeGoogleSignIn) calls
+//        GoogleSignin.signIn() → AndroidX Credential Manager bottom sheet
+//        → idToken returned via marsGoogleSignIn CustomEvent
+//        → signInWithCredential(GoogleAuthProvider.credential(idToken))
+//      On desktop browser:
+//        Firebase signInWithPopup() → Google account picker popup
+//        → id_token returned directly
+//      GSI button (desktop fallback):
+//        Google Identity Services renders a native button → id_token
+//        → loginWithGSI(idToken)
+//   3. signInWithCredential() exchanges the token with Firebase Auth
+//   4. Firebase returns a verified user object with name, email, photoURL
+//   5. syncUserProfile() saves/updates the user record in Firestore:
 //        users/{uid} → { uid, displayName, email, photoURL, provider,
 //                        createdAt, lastLoginAt, loginCount }
 //
@@ -215,8 +222,8 @@ export function AuthProvider({ children }) {
 
   // -------------------------------------------------------------------------
   // loginWithAccessToken
-  // Called when the native Android bridge returns a Google access_token
-  // (from expo-auth-session / Chrome Custom Tab OAuth flow).
+  // Called when the native Android bridge returns a Google access_token.
+  // Kept for backward compatibility; idToken path is preferred.
   // -------------------------------------------------------------------------
   const loginWithAccessToken = async (accessToken) => {
     const credential = GoogleAuthProvider.credential(null, accessToken);
@@ -228,9 +235,9 @@ export function AuthProvider({ children }) {
   //
   // Platform routing:
   //   Android WebView  → native bridge (window.__nativeGoogleSignIn)
-  //                       → expo-auth-session → Chrome Custom Tab
-  //                       → access_token returned via CustomEvent
-  //                       → signInWithCredential()
+  //                       → AndroidX Credential Manager single-tap bottom sheet
+  //                       → idToken returned via marsGoogleSignIn CustomEvent
+  //                       → signInWithCredential(GoogleAuthProvider.credential(idToken))
   //
   //   Desktop browser  → signInWithPopup() with GoogleAuthProvider
   //                       → Google account picker popup
@@ -240,7 +247,7 @@ export function AuthProvider({ children }) {
   // due to Android Chrome's storage partitioning (third-party cookie block).
   // -------------------------------------------------------------------------
   const loginWithGoogle = async () => {
-    // Android WebView: native bridge is available
+    // Android WebView: AndroidX Credential Manager bridge is available
     if (window.__marsNativeGoogleSignIn && window.__nativeGoogleSignIn) {
       window.__nativeGoogleSignIn();
       return new Promise((resolve, reject) => {
@@ -248,7 +255,17 @@ export function AuthProvider({ children }) {
           document.removeEventListener('marsGoogleSignIn', onSuccess);
           document.removeEventListener('marsGoogleSignInError', onError);
           try {
-            const cred = await loginWithAccessToken(e.detail.accessToken);
+            let cred;
+            if (e.detail.idToken) {
+              // Credential Manager path — idToken from GoogleSignin.signIn()
+              const credential = GoogleAuthProvider.credential(e.detail.idToken);
+              cred = await signInWithCredential(auth, credential);
+            } else if (e.detail.accessToken) {
+              // Legacy access_token path (fallback)
+              cred = await loginWithAccessToken(e.detail.accessToken);
+            } else {
+              throw new Error('No token returned from native Google Sign-In');
+            }
             resolve(cred);
           } catch (err) {
             reject(err);
