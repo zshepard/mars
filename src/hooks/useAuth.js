@@ -1,13 +1,29 @@
 // src/hooks/useAuth.js
 //
-// Firebase Auth — 3 fixes applied:
-//   Fix 1: Always use signInWithPopup() — never signInWithRedirect on mobile.
-//           Redirect fails in Android WebView due to storage partitioning.
-//           GSI (Google Identity Services) handles the native picker instead.
-//   Fix 2: authDomain is set to the current hostname (mars-lyart-alpha.vercel.app)
-//           so the OAuth redirect stays same-origin and sessionStorage is preserved.
-//   Fix 3: /__/auth/* is proxied through Vercel (vercel.json) so Firebase's
-//           cross-origin redirect handler works on the custom domain.
+// Google OAuth 2.0 Sign-In — secure implementation
+//
+// Environment variables required (set in .env or Vercel dashboard):
+//   REACT_APP_GOOGLE_CLIENT_ID     — Your Google OAuth 2.0 Client ID
+//                                    (from Google Cloud Console → APIs & Services → Credentials)
+//   REACT_APP_GOOGLE_CLIENT_SECRET — Your Google OAuth 2.0 Client Secret
+//                                    (NOTE: never expose this in client-side code in production;
+//                                     for a full server-side flow, move token exchange to a
+//                                     backend API route / Vercel serverless function)
+//   REACT_APP_FIREBASE_API_KEY     — Firebase project API key
+//   REACT_APP_FIREBASE_PROJECT_ID  — Firebase project ID
+//   REACT_APP_FIREBASE_APP_ID      — Firebase app ID
+//
+// OAuth 2.0 flow implemented here:
+//   1. User clicks "Sign in with Google"
+//   2. On desktop: Firebase signInWithPopup() opens Google account picker
+//      On Android WebView: native bridge (window.__nativeGoogleSignIn) delegates
+//      to expo-auth-session which opens a Chrome Custom Tab
+//   3. Google returns an access_token (native) or id_token (popup/GSI)
+//   4. signInWithCredential() exchanges the token with Firebase Auth
+//   5. Firebase returns a verified user object with name, email, photoURL
+//   6. syncUserProfile() saves/updates the user record in Firestore:
+//        users/{uid} → { uid, displayName, email, photoURL, provider,
+//                        createdAt, lastLoginAt, loginCount }
 //
 import { useState, useEffect, createContext, useContext } from 'react';
 import {
@@ -20,7 +36,14 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  increment,
+} from 'firebase/firestore';
 import {
   auth,
   db,
@@ -32,22 +55,36 @@ import {
 
 const AuthContext = createContext(null);
 
-const GUEST_KEY     = 'mars-guest-mode';
-const GUEST_ID      = 'mars-local-user';
-const GSI_CLIENT_ID = '656617062123-v0o86sbetu6hblb5cm0vs0sejs3dg3h9.apps.googleusercontent.com';
+const GUEST_KEY = 'mars-guest-mode';
+const GUEST_ID  = 'mars-local-user';
 
 // ---------------------------------------------------------------------------
-// Fix 2 (reinforced): Log the authDomain being used so it is visible in
-// DevTools / Logcat — helps confirm the custom domain is active.
+// Google OAuth 2.0 Client ID
+// Replace the placeholder below with your actual Client ID, or set the
+// REACT_APP_GOOGLE_CLIENT_ID environment variable in Vercel / .env
 // ---------------------------------------------------------------------------
+const GOOGLE_CLIENT_ID =
+  process.env.REACT_APP_GOOGLE_CLIENT_ID ||
+  '656617062123-v0o86sbetu6hblb5cm0vs0sejs3dg3h9.apps.googleusercontent.com';
+  // ↑ PLACEHOLDER — set REACT_APP_GOOGLE_CLIENT_ID in your environment
+
+// NOTE: The Google Client Secret (REACT_APP_GOOGLE_CLIENT_SECRET) is only
+// needed for server-side token exchange (authorization code flow).
+// The current implementation uses the implicit/token flow via Firebase Auth,
+// which does NOT require the client secret on the frontend.
+// If you move to a server-side flow, add a Vercel serverless function at
+// /api/auth/google and use process.env.REACT_APP_GOOGLE_CLIENT_SECRET there.
+
+// Log the auth domain on startup for debugging
 if (typeof window !== 'undefined') {
   console.info('[MARS Auth] authDomain =', auth.config?.authDomain ?? window.location.hostname);
+  console.info('[MARS Auth] Google Client ID =', GOOGLE_CLIENT_ID.slice(0, 20) + '...');
 }
 
 // ---------------------------------------------------------------------------
-// Initialize Google Identity Services (GSI)
-// GSI opens a native Google account picker (Chrome Custom Tab on Android)
-// instead of a WebView popup — this is the recommended approach for WebView apps.
+// Initialize Google Identity Services (GSI) button renderer
+// GSI is used on desktop browsers — it renders a native Google button that
+// opens an account picker and returns an id_token directly (no redirect).
 // ---------------------------------------------------------------------------
 export function initGSI(onCredential) {
   if (typeof window === 'undefined') return;
@@ -55,43 +92,70 @@ export function initGSI(onCredential) {
   const tryInit = () => {
     if (window.google?.accounts?.id) {
       window.google.accounts.id.initialize({
-        client_id:             GSI_CLIENT_ID,
+        client_id:             GOOGLE_CLIENT_ID,
         callback:              onCredential,
         auto_select:           false,
         cancel_on_tap_outside: true,
-        // Fix 2: tell GSI which domain is hosting the sign-in page
-        login_uri: window.location.origin + '/login',
+        login_uri:             window.location.origin + '/login',
       });
     }
   };
 
-  // GSI script loads async — try immediately then wait for load event
   if (window.google?.accounts?.id) {
     tryInit();
   } else {
     window.addEventListener('load', tryInit, { once: true });
-    // Extra retry in case the load event already fired
     setTimeout(tryInit, 1000);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Write/update user profile in Firestore (non-blocking background task)
+// syncUserProfile — saves/updates the user record in Firestore
+//
+// Schema: users/{uid}
+//   uid          string   — Firebase user ID
+//   displayName  string   — Full name from Google account
+//   email        string   — Email address from Google account
+//   photoURL     string   — Profile photo URL from Google account
+//   provider     string   — "google.com" | "password" | "emailLink"
+//   createdAt    timestamp — First sign-in time (set once, never overwritten)
+//   lastLoginAt  timestamp — Updated on every sign-in
+//   loginCount   number   — Incremented on every sign-in
 // ---------------------------------------------------------------------------
 async function syncUserProfile(firebaseUser) {
   try {
     const ref  = doc(db, 'users', firebaseUser.uid);
     const snap = await getDoc(ref);
+
+    // Determine the sign-in provider
+    const provider =
+      firebaseUser.providerData?.[0]?.providerId || 'unknown';
+
     if (!snap.exists()) {
+      // First-time sign-in — create the full user record
       await setDoc(ref, {
         uid:         firebaseUser.uid,
-        displayName: firebaseUser.displayName,
-        email:       firebaseUser.email,
-        photoURL:    firebaseUser.photoURL,
+        displayName: firebaseUser.displayName  || '',
+        email:       firebaseUser.email        || '',
+        photoURL:    firebaseUser.photoURL     || '',
+        provider,
         createdAt:   serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+        loginCount:  1,
+      });
+      console.info('[MARS Auth] New user record created for', firebaseUser.email);
+    } else {
+      // Returning user — update mutable fields only
+      await updateDoc(ref, {
+        displayName: firebaseUser.displayName  || snap.data().displayName || '',
+        email:       firebaseUser.email        || snap.data().email       || '',
+        photoURL:    firebaseUser.photoURL     || snap.data().photoURL    || '',
+        lastLoginAt: serverTimestamp(),
+        loginCount:  increment(1),
       });
     }
   } catch (err) {
+    // Non-fatal — user is still signed in even if Firestore write fails
     console.warn('[MARS Auth] Firestore user doc sync (non-fatal):', err);
   }
 }
@@ -118,17 +182,14 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }, 5000);
 
-    // NOTE: getRedirectResult() is intentionally NOT called here.
-    // Fix 1 removes all signInWithRedirect() usage, so there is never a
-    // pending redirect result to consume.  Calling it anyway can throw
-    // "auth/unauthorized-domain" on custom domains and block the loading state.
-
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (firebaseUser) {
         localStorage.removeItem(GUEST_KEY);
         setGuest(false);
+        // Expose user immediately — don't block on Firestore
         setUser({ ...firebaseUser, isGuest: false });
+        // Save/update user record in Firestore in the background
         syncUserProfile(firebaseUser);
       } else {
         if (!wasGuest) setUser(null);
@@ -143,7 +204,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Fix 1: loginWithGSI — sign in using a GSI credential JWT (id_token).
+  // loginWithGSI
+  // Called when the GSI button returns an id_token credential JWT.
+  // Firebase exchanges this for a session — no redirect needed.
   // -------------------------------------------------------------------------
   const loginWithGSI = async (idToken) => {
     const credential = GoogleAuthProvider.credential(idToken);
@@ -151,8 +214,9 @@ export function AuthProvider({ children }) {
   };
 
   // -------------------------------------------------------------------------
-  // loginWithAccessToken — sign in using a Google OAuth access_token.
-  // Used by the native Android bridge (expo-auth-session returns access_token).
+  // loginWithAccessToken
+  // Called when the native Android bridge returns a Google access_token
+  // (from expo-auth-session / Chrome Custom Tab OAuth flow).
   // -------------------------------------------------------------------------
   const loginWithAccessToken = async (accessToken) => {
     const credential = GoogleAuthProvider.credential(null, accessToken);
@@ -160,17 +224,25 @@ export function AuthProvider({ children }) {
   };
 
   // -------------------------------------------------------------------------
-  // Fix 1: loginWithGoogle
-  //   • In the Android WebView: calls the native bridge (__nativeGoogleSignIn)
-  //     which triggers expo-auth-session → Chrome Custom Tab → returns token.
-  //   • On desktop/browser: falls back to signInWithPopup().
-  //   signInWithRedirect is NEVER used.
+  // loginWithGoogle — primary Google sign-in entry point
+  //
+  // Platform routing:
+  //   Android WebView  → native bridge (window.__nativeGoogleSignIn)
+  //                       → expo-auth-session → Chrome Custom Tab
+  //                       → access_token returned via CustomEvent
+  //                       → signInWithCredential()
+  //
+  //   Desktop browser  → signInWithPopup() with GoogleAuthProvider
+  //                       → Google account picker popup
+  //                       → id_token returned directly
+  //
+  // signInWithRedirect() is intentionally NOT used — it fails in WebView
+  // due to Android Chrome's storage partitioning (third-party cookie block).
   // -------------------------------------------------------------------------
   const loginWithGoogle = async () => {
+    // Android WebView: native bridge is available
     if (window.__marsNativeGoogleSignIn && window.__nativeGoogleSignIn) {
-      // Native Android bridge available — delegate to Expo
       window.__nativeGoogleSignIn();
-      // Return a promise that resolves when marsGoogleSignIn event fires
       return new Promise((resolve, reject) => {
         const onSuccess = async (e) => {
           document.removeEventListener('marsGoogleSignIn', onSuccess);
@@ -191,16 +263,28 @@ export function AuthProvider({ children }) {
         document.addEventListener('marsGoogleSignInError', onError, { once: true });
       });
     }
-    // Desktop browser fallback — popup works fine
+    // Desktop browser: use popup
     return signInWithPopup(auth, googleProvider);
   };
 
   // -------------------------------------------------------------------------
-  // Email / magic-link auth
+  // Email / password auth
+  // -------------------------------------------------------------------------
+  const loginWithEmail = (email, password) =>
+    signInWithEmailAndPassword(auth, email, password);
+
+  const signUpWithEmail = async (email, password, displayName) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (displayName) await updateProfile(cred.user, { displayName });
+    return cred;
+  };
+
+  // -------------------------------------------------------------------------
+  // Magic link (passwordless email) auth
   // -------------------------------------------------------------------------
   const sendMagicLink = async (email) => {
     const actionCodeSettings = {
-      url:            window.location.origin + '/login?emailLink=1',
+      url:             window.location.origin + '/login?emailLink=1',
       handleCodeInApp: true,
     };
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
@@ -214,21 +298,18 @@ export function AuthProvider({ children }) {
     return cred;
   };
 
-  const loginWithEmail = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
-
-  const signUpWithEmail = async (email, password, displayName) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    if (displayName) await updateProfile(cred.user, { displayName });
-    return cred;
-  };
-
+  // -------------------------------------------------------------------------
+  // Guest mode — local only, no Firebase account
+  // -------------------------------------------------------------------------
   const continueAsGuest = () => {
     localStorage.setItem(GUEST_KEY, 'true');
     setGuest(true);
     setUser({ uid: GUEST_ID, displayName: 'Guest', isGuest: true });
   };
 
+  // -------------------------------------------------------------------------
+  // Sign out
+  // -------------------------------------------------------------------------
   const logout = async () => {
     localStorage.removeItem(GUEST_KEY);
     setGuest(false);
