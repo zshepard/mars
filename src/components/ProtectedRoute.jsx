@@ -5,7 +5,7 @@
 // Route guard rules:
 //   1. Auth state still loading  → show loading splash (no flash of /login)
 //   2. user is null              → redirect to /login
-//   3. user.isGuest === true     → redirect to /login  (guests blocked)
+//   3. user.isGuest === true     → allow through (guest mode enabled for testing)
 //   4. real authenticated user   → render children
 //
 // Real-time sync bridge:
@@ -80,12 +80,13 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // 2 & 3. Not signed in OR guest mode — redirect to login
+  // 2. Not signed in — redirect to login
   // Preserve the attempted URL so Login can redirect back after sign-in
-  if (!user || user.isGuest) {
+  if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 4. Authenticated real user — allow through
+  // 3 & 4. Guest or authenticated real user — allow through
+  // Guest data is local-only; Firestore hooks guard against guest uid automatically
   return children;
 }

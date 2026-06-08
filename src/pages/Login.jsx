@@ -28,10 +28,10 @@ export default function Login() {
   const gsiSignupRef = useRef(null);
 
   // Redirect to dashboard (or the page they were trying to reach) if already signed in.
-  // Guests are NOT redirected — they must sign in with a real account.
+  // Guests ARE redirected — guest mode is allowed for testing.
   const from = location.state?.from?.pathname || '/';
   useEffect(() => {
-    if (user && !user.isGuest) navigate(from, { replace: true });
+    if (user) navigate(from, { replace: true });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize GSI and render native Google buttons
@@ -95,13 +95,11 @@ export default function Login() {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Guest mode — guests stay on the login page; the dashboard is protected.
-  // continueAsGuest() is kept for local alarm scheduling without an account,
-  // but guests cannot navigate to the inner dashboard.
+  // Guest mode — allows testing the app without a Google/email account.
+  // Guest data is stored locally only (localStorage) and not synced to Firestore.
   const handleGuest = () => {
     continueAsGuest();
-    // Do NOT navigate to '/' — ProtectedRoute will redirect guests back to /login.
-    // Instead, show a brief message so the user knows they need to sign in.
+    navigate(from, { replace: true });
   };
 
   // Google sign-in handler
@@ -267,8 +265,10 @@ export default function Login() {
           Create an Account
         </button>
 
-        {/* Guest mode removed — dashboard requires a Google or email account.
-            Guests cannot access the inner dashboard (ProtectedRoute blocks them). */}
+        {/* Guest mode — for testing without an account */}
+        <button className="guest-btn" onClick={handleGuest} disabled={loading}>
+          Continue as Guest
+        </button>
       </div>
 
       {/* ── MAGIC LINK SCREEN ── */}
