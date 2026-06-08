@@ -32,6 +32,13 @@
   transition: background var(--t-fast);
 }
 .settings-row:last-child { border-bottom: none; }
+.settings-row--clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.settings-row--clickable:hover {
+  background: var(--bg3, rgba(255,255,255,0.04));
+}
 .settings-row:hover { background: var(--bg3); }
 .settings-row-left {
   display: flex;

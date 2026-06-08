@@ -23,9 +23,16 @@
 .app-main {
   flex: 1;
   overflow-y: auto;
-  background: var(--bg);
+  /* Use background pack override if set, otherwise fall back to theme default */
+  background: var(--app-bg-override, var(--bg));
+  background-attachment: fixed;
   /* Smooth scroll */
   scroll-behavior: smooth;
+}
+
+/* Apply background pack to the full shell when a pack is active */
+:root:has(#root) {
+  --app-bg-override: ; /* empty by default — set by BackgroundPacks.jsx via JS */
 }
 
 /* Every direct child of app-main gets a page-enter animation */

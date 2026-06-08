@@ -3,8 +3,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
-  height: 56px;
+  /* Horizontal padding + safe-area sides for notched phones */
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  /* Height = 56px + Android status bar height */
+  height: calc(56px + env(safe-area-inset-top, 0px));
+  /* Push content below the status bar */
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   position: sticky;

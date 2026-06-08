@@ -1,17 +1,21 @@
 // src/pages/Settings.jsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth }  from '../hooks/useAuth';
 import { useMars }  from '../hooks/useMars';
+import { getPackById } from '../data/backgroundPacks';
 import './Settings.css';
 
 export default function Settings() {
   const { user, logout }                                    = useAuth();
   const { notifPermission, requestNotifications, isOnline } = useMars();
+  const navigate                                            = useNavigate();
   const [voiceEnabled, setVoiceEnabled]                    = useState(true);
   const [voiceWakeWord, setVoiceWakeWord]                  = useState('Hey Mars');
   const [defaultDevice, setDefaultDevice]                  = useState('phone');
   // eslint-disable-next-line no-unused-vars
   const [theme, setTheme]                                  = useState('dark');
+  const currentPack = getPackById(localStorage.getItem('mars-background-pack') || 'default-dark');
 
   return (
     <div className="settings-page page-enter">
@@ -82,6 +86,30 @@ export default function Settings() {
             <option value="computer">Computer</option>
             <option value="all">All devices</option>
           </select>
+        </div>
+      </div>
+
+      {/* Background Packs */}
+      <div className="settings-section">
+        <div className="settings-section-title">Appearance</div>
+        <div className="settings-row settings-row--clickable" onClick={() => navigate('/backgrounds')}>
+          <div>
+            <div className="settings-val">Background Pack</div>
+            <div className="settings-sub">{currentPack?.label || 'Default Dark'}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 40,
+                height: 20,
+                borderRadius: 4,
+                background: currentPack?.preview || 'var(--bg2)',
+                border: '1px solid var(--border)',
+                flexShrink: 0,
+              }}
+            />
+            <i className="ti ti-chevron-right" style={{ color: 'var(--text3)' }} />
+          </div>
         </div>
       </div>
 

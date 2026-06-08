@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useRef, useCallback }              from 'react';
+import { useState, useRef, useCallback, useEffect }   from 'react';
 import { BrowserRouter, Routes, Route, Navigate }     from 'react-router-dom';
 import { AuthProvider }                                from './hooks/useAuth';
 import ProtectedRoute                                  from './components/ProtectedRoute';
@@ -16,6 +16,8 @@ import Voice                                           from './pages/Voice';
 import AI                                              from './pages/AI';
 import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
+import BackgroundPacks                                 from './pages/BackgroundPacks';
+import { getPackById }                                 from './data/backgroundPacks';
 import './styles/global.css';
 import './App.css';
 
@@ -23,6 +25,17 @@ function AppShell() {
   // Sidebar: open by default on desktop, closed on mobile
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700);
   const isMobile = window.innerWidth <= 700;
+
+  // Restore saved background pack on every app load
+  useEffect(() => {
+    const savedId = localStorage.getItem('mars-background-pack');
+    if (savedId) {
+      const pack = getPackById(savedId);
+      if (pack?.background) {
+        document.documentElement.style.setProperty('--app-bg-override', pack.background);
+      }
+    }
+  }, []);
 
   // ── Swipe to open/close sidebar (desktop only — mobile uses BottomNav) ──
   const touchStart = useRef(null);
@@ -72,8 +85,9 @@ function AppShell() {
             <Route path="/voice"     element={<Voice />}       />
             <Route path="/ai"        element={<AI />}          />
             <Route path="/platforms" element={<Platforms />}   />
-            <Route path="/settings"  element={<Settings />}    />
-            <Route path="*"          element={<Navigate to="/" replace />} />
+            <Route path="/settings"    element={<Settings />}        />
+            <Route path="/backgrounds" element={<BackgroundPacks />}  />
+            <Route path="*"            element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
