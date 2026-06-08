@@ -9,6 +9,25 @@ import { useSwipe }          from '../hooks/useSwipe';
 import SwipeItem             from '../components/SwipeItem';
 import './Alarms.css';
 
+/* ─── Native bridge helpers ─────────────────────────────────────── */
+// Returns true when running inside the MARS Android WebView
+const isNativeApp = () => !!(window.ReactNativeWebView || window.__marsNativeBridgeReady);
+
+// Request the native ringtone list; resolves with an array of {id, label, uri}
+function getNativeRingtones() {
+  return new Promise((resolve) => {
+    if (!isNativeApp()) { resolve([]); return; }
+    const handler = (e) => {
+      document.removeEventListener('marsRingtones', handler);
+      resolve(e.detail?.ringtones || []);
+    };
+    document.addEventListener('marsRingtones', handler);
+    window.__nativeGetRingtones?.();
+    // Fallback timeout in case native layer doesn't respond
+    setTimeout(() => { document.removeEventListener('marsRingtones', handler); resolve([]); }, 3000);
+  });
+}
+
 /* ─── Constants ─────────────────────────────────────────────────── */
 const DAYS    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SOUNDS  = [
@@ -87,6 +106,18 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
   const toggleDay = d =>
     set('days', form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d]);
 
+  // Native ringtone picker — only shown when running in the Android app
+  const [nativeRingtones, setNativeRingtones] = useState([]);
+  const [loadingRingtones, setLoadingRingtones] = useState(false);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    setLoadingRingtones(true);
+    getNativeRingtones().then(list => {
+      setNativeRingtones(list);
+      setLoadingRingtones(false);
+    });
+  }, []);
+
   return (
     <div className="alarm-form card">
       <h3 className="form-title">{title}</h3>
@@ -149,12 +180,29 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
         <div className="form-field">
           <label>Sound</label>
           <div className="sound-selector">
-            <select value={form.sound} onChange={e => set('sound', e.target.value)}>
-              {SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
-            </select>
-            <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)}>
-              <i className="ti ti-player-play" /> Preview
-            </button>
+            {isNativeApp() && nativeRingtones.length > 0 ? (
+              /* Native ringtone picker — shows system alarm sounds from Android */
+              <select value={form.sound} onChange={e => set('sound', e.target.value)}>
+                {nativeRingtones.map(r => (
+                  <option key={r.id} value={r.uri}>{r.label}</option>
+                ))}
+              </select>
+            ) : (
+              /* Web fallback — shows built-in web sounds */
+              <>
+                <select value={form.sound} onChange={e => set('sound', e.target.value)}>
+                  {loadingRingtones
+                    ? <option>Loading system sounds...</option>
+                    : SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)
+                  }
+                </select>
+                {!isNativeApp() && (
+                  <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)}>
+                    <i className="ti ti-player-play" /> Preview
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
         <div className="form-field">
