@@ -288,6 +288,17 @@ export default function Alarms() {
   const TABS = ['alarms', 'links', 'routines'];
   const [tab, setTab] = useState('alarms'); // 'alarms' | 'links' | 'routines'
 
+  // FAB listener — opens the add form for the current tab
+  useEffect(() => {
+    function onFab() {
+      if (tab === 'alarms')     { setShowAlarmForm(true);   setEditAlarmId(null); }
+      else if (tab === 'links') { setShowLinkForm(true);    setEditLinkId(null);  }
+      else                     { setShowRoutineForm(true); }
+    }
+    window.addEventListener('mars:fab', onFab);
+    return () => window.removeEventListener('mars:fab', onFab);
+  }, [tab]);
+
   // Swipe left/right to switch tabs
   const swipeTabHandlers = useSwipe({
     onSwipeLeft:  () => setTab(t => { const i = TABS.indexOf(t); return TABS[Math.min(i + 1, TABS.length - 1)]; }),

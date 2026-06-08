@@ -1,0 +1,167 @@
+/* src/components/BottomNav.css — mobile-only bottom navigation */
+
+/* ── Bottom bar ───────────────────────────────────────────────── */
+.bottom-nav {
+  display: none; /* hidden on desktop */
+}
+
+@media (max-width: 700px) {
+  .bottom-nav {
+    display: flex;
+    align-items: stretch;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    z-index: 180;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ── Individual tab ───────────────────────────────────────────── */
+.bottom-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  padding: 6px 4px;
+  transition: color var(--t-fast), transform var(--t-fast);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-tab i {
+  font-size: 22px;
+  transition: transform 0.18s var(--ease-spring), color var(--t-fast);
+}
+
+.bottom-tab:active {
+  transform: scale(0.9);
+}
+
+/* Active state — green indicator dot above icon */
+.bottom-tab.active {
+  color: var(--green);
+}
+
+.bottom-tab.active i {
+  transform: translateY(-2px) scale(1.08);
+  color: var(--green);
+}
+
+.bottom-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* ── More drawer overlay ──────────────────────────────────────── */
+.bottom-more-overlay {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .bottom-more-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 170;
+    animation: fadeIn 0.18s ease;
+  }
+}
+
+/* ── More drawer ──────────────────────────────────────────────── */
+.bottom-more-drawer {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .bottom-more-drawer {
+    display: block;
+    position: fixed;
+    bottom: 62px;
+    left: 0;
+    right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    border-radius: 20px 20px 0 0;
+    z-index: 175;
+    padding: 12px 20px 20px;
+    animation: slideUp 0.22s var(--ease-spring);
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.bottom-more-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border2);
+  margin: 0 auto 16px;
+}
+
+/* ── More grid ────────────────────────────────────────────────── */
+.bottom-more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.bottom-more-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 8px;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 500;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-more-item i {
+  font-size: 22px;
+}
+
+.bottom-more-item:active {
+  transform: scale(0.93);
+  background: var(--green-dim);
+  color: var(--green);
+  border-color: rgba(29, 158, 117, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

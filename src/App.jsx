@@ -1,36 +1,37 @@
 // src/App.jsx
-import { useState, useEffect, useRef, useCallback }   from 'react';
+import { useState, useRef, useCallback }              from 'react';
 import { BrowserRouter, Routes, Route, Navigate }     from 'react-router-dom';
 import { AuthProvider }                                from './hooks/useAuth';
 import ProtectedRoute                                  from './components/ProtectedRoute';
 import Topbar                                          from './components/Topbar';
 import Sidebar                                         from './components/Sidebar';
+import BottomNav                                       from './components/BottomNav';
+import FAB                                             from './components/FAB';
 import Login                                           from './pages/Login';
 import Dashboard                                       from './pages/Dashboard';
 import Alarms                                          from './pages/Alarms';
-// Routines merged into Alarms page as a tab
 import HomeControl                                     from './pages/HomeControl';
 import Health                                          from './pages/Health';
 import Voice                                           from './pages/Voice';
 import AI                                              from './pages/AI';
 import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
-// ScheduledLinks merged into Alarms page
 import './styles/global.css';
 import './App.css';
 
 function AppShell() {
-  // Start closed on mobile so content is the first thing the user sees
+  // Sidebar: open by default on desktop, closed on mobile
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700);
-  const isWebView = /MARS-App|wv|WebView/.test(navigator.userAgent) ||
-    (navigator.userAgent.includes('Android') && /Version\/\d/.test(navigator.userAgent));
+  const isMobile = window.innerWidth <= 700;
 
-  // ── Swipe-to-open/close sidebar ─────────────────────────────────
+  // ── Swipe to open/close sidebar (desktop only — mobile uses BottomNav) ──
   const touchStart = useRef(null);
 
   const onTouchStart = useCallback((e) => {
-    const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
+    if (window.innerWidth > 700) {
+      const t = e.touches[0];
+      touchStart.current = { x: t.clientX, y: t.clientY };
+    }
   }, []);
 
   const onTouchEnd = useCallback((e) => {
@@ -39,22 +40,28 @@ function AppShell() {
     const dx = t.clientX - touchStart.current.x;
     const dy = Math.abs(t.clientY - touchStart.current.y);
     touchStart.current = null;
-    // Only register horizontal swipes (dy < 60px drift)
     if (Math.abs(dx) < 50 || dy > 60) return;
-    if (dx > 0) setSidebarOpen(true);   // swipe right → open
-    else        setSidebarOpen(false);  // swipe left  → close
+    if (dx > 0) setSidebarOpen(true);
+    else        setSidebarOpen(false);
   }, []);
 
   return (
     <div
-      className={`app-shell${isWebView ? ' mars-webview' : ''}`}
+      className="app-shell"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <Topbar onMenuToggle={() => setSidebarOpen((p) => !p)} />
+      {/* Topbar — on mobile, hide the hamburger since BottomNav handles navigation */}
+      <Topbar
+        onMenuToggle={() => setSidebarOpen(p => !p)}
+        hideBurger={isMobile}
+      />
+
       <div className="app-body">
+        {/* Sidebar — hidden on mobile via CSS, BottomNav takes over */}
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="app-main">
+
+        <main className="app-main app-main--mobile-padded">
           <Routes>
             <Route path="/"          element={<Dashboard />}   />
             <Route path="/alarms"    element={<Alarms />}      />
@@ -70,6 +77,10 @@ function AppShell() {
           </Routes>
         </main>
       </div>
+
+      {/* Mobile-only: bottom nav bar + FAB */}
+      <BottomNav />
+      <FAB />
     </div>
   );
 }

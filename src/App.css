@@ -33,6 +33,18 @@
   animation: pageEnter var(--t-page) both;
 }
 
+/* On mobile, pad the main content so it clears the bottom nav bar */
+@media (max-width: 700px) {
+  .app-main--mobile-padded {
+    padding-bottom: 70px;
+  }
+  /* Hide the desktop sidebar on mobile — BottomNav takes over */
+  .app-body .sidebar,
+  .app-body .sidebar-overlay {
+    display: none !important;
+  }
+}
+
 /* Mobile overlay when sidebar is open */
 @media (max-width: 700px) {
   .app-body::after {

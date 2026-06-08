@@ -1,5 +1,5 @@
 // src/pages/HomeControl.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useHome } from '../hooks/useHome';
 import './HomeControl.css';
@@ -278,6 +278,13 @@ export default function HomeControl() {
   } = useHome(user?.uid);
 
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // FAB listener — opens Add Room modal when FAB is tapped on mobile
+  useEffect(() => {
+    function onFab() { setShowAddModal(true); }
+    window.addEventListener('mars:fab', onFab);
+    return () => window.removeEventListener('mars:fab', onFab);
+  }, []);
 
   return (
     <div className="page-wrap">

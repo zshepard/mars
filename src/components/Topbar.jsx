@@ -24,7 +24,7 @@ function useClock() {
   return { h12, m, s, ampm, dateStr };
 }
 
-export default function Topbar({ onMenuToggle }) {
+export default function Topbar({ onMenuToggle, hideBurger = false }) {
   const { user, logout }             = useAuth();
   const [showUser, setShowUser]      = useState(false);
   const { h12, m, s, ampm, dateStr } = useClock();
@@ -43,10 +43,12 @@ export default function Topbar({ onMenuToggle }) {
 
   return (
     <header className="topbar">
-      {/* Hamburger */}
-      <button className="menu-btn" onClick={onMenuToggle} aria-label="Toggle menu">
-        <span /><span /><span />
-      </button>
+      {/* Hamburger — hidden on mobile where BottomNav handles navigation */}
+      {!hideBurger && (
+        <button className="menu-btn" onClick={onMenuToggle} aria-label="Toggle menu">
+          <span /><span /><span />
+        </button>
+      )}
 
       {/* Brand */}
       <div className="topbar-brand">

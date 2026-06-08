@@ -1,0 +1,43 @@
+/* src/components/FAB.css — floating action button, mobile only */
+.fab {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 78px;          /* sits just above the bottom nav bar */
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--green);
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    box-shadow:
+      0 4px 16px rgba(29, 158, 117, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.4);
+    z-index: 160;
+    transition:
+      transform 0.18s var(--ease-spring),
+      box-shadow var(--t-fast),
+      background var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .fab:active {
+    transform: scale(0.88) rotate(45deg);
+    box-shadow:
+      0 2px 8px rgba(29, 158, 117, 0.3),
+      0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .fab i {
+    transition: transform 0.18s var(--ease-spring);
+    pointer-events: none;
+  }
+}
