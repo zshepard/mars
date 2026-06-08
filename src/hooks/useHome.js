@@ -1,113 +1,194 @@
 // src/hooks/useHome.js
+//
+// Dynamic room management hook.
+// Rooms are stored per-user in Firestore: users/{uid}/homeRooms/{roomId}
+// Each room document contains: name, icon, temp, light, aroma, customSettings[]
+// Custom settings are stored as an array inside the room document.
+//
+// For unauthenticated users, all state is kept in localStorage only.
+
 import { useState, useEffect } from 'react';
 import {
-  collection, onSnapshot, doc, setDoc, serverTimestamp,
+  collection, onSnapshot, doc,
+  setDoc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { queueHomeAction } from '../serviceWorkerRegistration';
 
 const GUEST_ID = 'mars-local-user';
 
-const DEFAULT_ROOMS = [
-  { id: 'master',    name: 'Master Bedroom', icon: 'ti-bed',            light: 80, temp: 70, volume: 45, aroma: false },
-  { id: 'living',    name: 'Living Room',    icon: 'ti-sofa',           light: 90, temp: 72, volume: 60, aroma: false },
-  { id: 'kids',      name: "Kids Room",      icon: 'ti-ball-basketball', light: 70, temp: 71, volume: 35, aroma: false },
-  { id: 'office',    name: 'Office',         icon: 'ti-briefcase',      light: 95, temp: 70, volume: 40, aroma: false },
-  { id: 'vehicle',   name: 'Vehicle',        icon: 'ti-car',            light: 50, temp: 69, volume: 55, aroma: false },
-];
+/* ── Default room shape ─────────────────────────────────────────────── */
+function makeRoom(name, icon) {
+  return {
+    id: `room-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    icon,
+    temp: 70,
+    light: 80,
+    aroma: false,
+    customSettings: [],
+    createdAt: Date.now(),
+  };
+}
 
-const MOOD_PRESETS = {
-  energized: { light: 100, temp: 70, volume: 70 },
-  focused:   { light: 90,  temp: 68, volume: 30 },
-  calm:      { light: 40,  temp: 72, volume: 20 },
-  tired:     { light: 20,  temp: 74, volume: 15 },
-  anxious:   { light: 60,  temp: 71, volume: 25 },
-};
-
+/* ── Local storage helpers (guest / offline fallback) ───────────────── */
 function getLocalRooms() {
   try {
-    const raw = localStorage.getItem('mars-home-rooms');
-    return raw ? JSON.parse(raw) : DEFAULT_ROOMS;
+    const raw = localStorage.getItem('mars-home-rooms-v2');
+    return raw ? JSON.parse(raw) : [];
   } catch {
-    return DEFAULT_ROOMS;
+    return [];
   }
 }
 
 function saveLocalRooms(rooms) {
-  localStorage.setItem('mars-home-rooms', JSON.stringify(rooms));
+  localStorage.setItem('mars-home-rooms-v2', JSON.stringify(rooms));
 }
 
+/* ── Hook ───────────────────────────────────────────────────────────── */
 export function useHome(uid) {
-  // Hard guard: never query Firestore without a real authenticated uid.
   const isGuest = !uid || uid === GUEST_ID;
-  const [rooms, setRooms]     = useState(isGuest ? getLocalRooms() : DEFAULT_ROOMS);
-  const [mood, setMoodState]  = useState('energized');
+
+  const [rooms, setRooms]     = useState([]);
   const [loading, setLoading] = useState(true);
 
+  /* Subscribe to Firestore or load from localStorage */
   useEffect(() => {
     if (isGuest) {
       setRooms(getLocalRooms());
       setLoading(false);
       return;
     }
+
     const unsub = onSnapshot(
       collection(db, 'users', uid, 'homeRooms'),
       (snap) => {
-        if (!snap.empty) {
-          const fromDB = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setRooms(fromDB);
-        }
+        const fromDB = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+        setRooms(fromDB);
         setLoading(false);
-      }
+      },
+      () => setLoading(false)
     );
     return unsub;
   }, [uid, isGuest]);
 
+  /* ── Helpers ──────────────────────────────────────────────────────── */
+  const persist = async (room) => {
+    if (isGuest) return;
+    const { id, ...data } = room;
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', id),
+      { ...data, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  /* ── Add room ─────────────────────────────────────────────────────── */
+  const addRoom = async ({ name, icon }) => {
+    const room = makeRoom(name, icon);
+    const updated = [...rooms, room];
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+    await persist(room);
+  };
+
+  /* ── Delete room ──────────────────────────────────────────────────── */
+  const deleteRoom = async (roomId) => {
+    const updated = rooms.filter((r) => r.id !== roomId);
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+    await deleteDoc(doc(db, 'users', uid, 'homeRooms', roomId));
+  };
+
+  /* ── Update a field on a room (temp, light, aroma, …) ─────────────── */
   const updateRoom = async (roomId, field, value) => {
-    const updated = rooms.map((r) => (r.id === roomId ? { ...r, [field]: value } : r));
+    const updated = rooms.map((r) =>
+      r.id === roomId ? { ...r, [field]: value } : r
+    );
     setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
 
-    if (isGuest) {
-      saveLocalRooms(updated);
-      return;
-    }
-
-    const action = { type: 'ROOM_UPDATE', roomId, field, value, timestamp: Date.now() };
-    if (navigator.onLine) {
-      await setDoc(
-        doc(db, 'users', uid, 'homeRooms', roomId),
-        { [field]: value, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    } else {
-      queueHomeAction(action);
-    }
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { [field]: value, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
   };
 
-  const applyMood = async (moodKey) => {
-    setMoodState(moodKey);
-    const preset = MOOD_PRESETS[moodKey];
-    if (!preset) return;
-    const updated = rooms.map((r) => ({ ...r, ...preset }));
+  /* ── Add a custom setting to a room ──────────────────────────────── */
+  const addCustomSetting = async (roomId) => {
+    const newSetting = {
+      id: `cs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label: '',
+      value: '',
+    };
+    const updated = rooms.map((r) =>
+      r.id === roomId
+        ? { ...r, customSettings: [...(r.customSettings || []), newSetting] }
+        : r
+    );
     setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
 
-    if (isGuest) {
-      saveLocalRooms(updated);
-      return;
-    }
-
-    for (const room of updated) {
-      if (navigator.onLine) {
-        await setDoc(
-          doc(db, 'users', uid, 'homeRooms', room.id),
-          { ...preset, updatedAt: serverTimestamp() },
-          { merge: true }
-        );
-      } else {
-        queueHomeAction({ type: 'MOOD_APPLY', roomId: room.id, preset, moodKey });
-      }
-    }
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { customSettings: room.customSettings, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
   };
 
-  return { rooms, mood, loading, updateRoom, applyMood, MOOD_PRESETS };
+  /* ── Update a custom setting field ──────────────────────────────── */
+  const updateCustomSetting = async (roomId, settingId, field, value) => {
+    const updated = rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      return {
+        ...r,
+        customSettings: (r.customSettings || []).map((s) =>
+          s.id === settingId ? { ...s, [field]: value } : s
+        ),
+      };
+    });
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { customSettings: room.customSettings, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  /* ── Delete a custom setting ─────────────────────────────────────── */
+  const deleteCustomSetting = async (roomId, settingId) => {
+    const updated = rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      return {
+        ...r,
+        customSettings: (r.customSettings || []).filter((s) => s.id !== settingId),
+      };
+    });
+    setRooms(updated);
+    if (isGuest) { saveLocalRooms(updated); return; }
+
+    const room = updated.find((r) => r.id === roomId);
+    await setDoc(
+      doc(db, 'users', uid, 'homeRooms', roomId),
+      { customSettings: room.customSettings, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  return {
+    rooms,
+    loading,
+    addRoom,
+    deleteRoom,
+    updateRoom,
+    addCustomSetting,
+    updateCustomSetting,
+    deleteCustomSetting,
+  };
 }
