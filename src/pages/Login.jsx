@@ -98,13 +98,21 @@ export default function Login() {
     navigate('/');
   };
 
-  // Fallback: if GSI button didn't render, use popup/redirect
+  // Google sign-in handler
+  // • In Android WebView: routes to native bridge (expo-auth-session → Chrome Custom Tab)
+  // • In desktop browser: uses signInWithPopup()
   const handleGoogleFallback = async () => {
     setError('');
+    setLoading(true);
     try {
       await loginWithGoogle();
+      navigate('/');
     } catch (e) {
-      setError('Google sign-in failed. Please try email/password.');
+      if (e.message !== 'Google sign-in cancelled') {
+        setError('Google sign-in failed. Please try email/password.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

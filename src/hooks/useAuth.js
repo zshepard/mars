@@ -143,8 +143,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Fix 1: loginWithGSI — primary sign-in path for ALL platforms.
-  // GSI returns a credential JWT directly; no redirect or popup window needed.
+  // Fix 1: loginWithGSI — sign in using a GSI credential JWT (id_token).
   // -------------------------------------------------------------------------
   const loginWithGSI = async (idToken) => {
     const credential = GoogleAuthProvider.credential(idToken);
@@ -152,12 +151,47 @@ export function AuthProvider({ children }) {
   };
 
   // -------------------------------------------------------------------------
-  // Fix 1: loginWithGoogle — fallback popup for browsers where GSI is blocked.
-  // Always uses signInWithPopup(); signInWithRedirect is never used.
+  // loginWithAccessToken — sign in using a Google OAuth access_token.
+  // Used by the native Android bridge (expo-auth-session returns access_token).
+  // -------------------------------------------------------------------------
+  const loginWithAccessToken = async (accessToken) => {
+    const credential = GoogleAuthProvider.credential(null, accessToken);
+    return signInWithCredential(auth, credential);
+  };
+
+  // -------------------------------------------------------------------------
+  // Fix 1: loginWithGoogle
+  //   • In the Android WebView: calls the native bridge (__nativeGoogleSignIn)
+  //     which triggers expo-auth-session → Chrome Custom Tab → returns token.
+  //   • On desktop/browser: falls back to signInWithPopup().
+  //   signInWithRedirect is NEVER used.
   // -------------------------------------------------------------------------
   const loginWithGoogle = async () => {
-    // signInWithPopup works on desktop and modern Android Chrome.
-    // In a WebView the GSI button (loginWithGSI) is the preferred path.
+    if (window.__marsNativeGoogleSignIn && window.__nativeGoogleSignIn) {
+      // Native Android bridge available — delegate to Expo
+      window.__nativeGoogleSignIn();
+      // Return a promise that resolves when marsGoogleSignIn event fires
+      return new Promise((resolve, reject) => {
+        const onSuccess = async (e) => {
+          document.removeEventListener('marsGoogleSignIn', onSuccess);
+          document.removeEventListener('marsGoogleSignInError', onError);
+          try {
+            const cred = await loginWithAccessToken(e.detail.accessToken);
+            resolve(cred);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        const onError = (e) => {
+          document.removeEventListener('marsGoogleSignIn', onSuccess);
+          document.removeEventListener('marsGoogleSignInError', onError);
+          reject(new Error(e.detail?.error || 'Google sign-in cancelled'));
+        };
+        document.addEventListener('marsGoogleSignIn', onSuccess, { once: true });
+        document.addEventListener('marsGoogleSignInError', onError, { once: true });
+      });
+    }
+    // Desktop browser fallback — popup works fine
     return signInWithPopup(auth, googleProvider);
   };
 
@@ -210,6 +244,7 @@ export function AuthProvider({ children }) {
         loading,
         loginWithGoogle,
         loginWithGSI,
+        loginWithAccessToken,
         loginWithEmail,
         signUpWithEmail,
         continueAsGuest,
