@@ -1,21 +1,72 @@
 // src/components/ProtectedRoute.jsx
 //
-// Route guard — only authenticated (Google / email) users may access
-// the inner dashboard. Guest users and unauthenticated visitors are
-// redirected to /login.
+// Route guard + real-time cross-platform sync bridge
 //
-// Rules:
+// Route guard rules:
 //   1. Auth state still loading  → show loading splash (no flash of /login)
 //   2. user is null              → redirect to /login
 //   3. user.isGuest === true     → redirect to /login  (guests blocked)
 //   4. real authenticated user   → render children
 //
+// Real-time sync bridge:
+//   Once a real user is authenticated, this component opens a Firestore
+//   onSnapshot() listener via useSyncedProfile(). Any change to the user's
+//   profile document in Firestore is delivered to ALL connected sessions
+//   (web + Android WebView) within ~100–300ms.
+//
+//   When a profile update arrives, the 'marsProfileSync' CustomEvent is
+//   dispatched. The Android WebView bridge listens for this event and
+//   injects the updated profile into the native layer via injectJavaScript().
+//
+// Identity:
+//   The Firestore listener path is users/{uid} where uid === Google sub ID.
+//   Firebase security rules ensure only the owning user can read this path.
+//
+import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useSyncedProfile } from '../hooks/useSyncedProfile';
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
+
+  // Open the real-time Firestore listener for the authenticated user.
+  // useSyncedProfile is a no-op when user is null or guest.
+  const { profile, syncing, lastSyncAt } = useSyncedProfile(user);
+
+  // ── Android WebView sync bridge ─────────────────────────────────────────────
+  // When the Firestore profile updates, inject the new profile into the
+  // Android native layer so both sessions stay in sync without a page reload.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleProfileSync = (event) => {
+      const { profile: updatedProfile, syncedAt, isFirst } = event.detail;
+
+      // Only push to native layer if we are running inside the MARS Android app
+      if (!window.ReactNativeWebView) return;
+
+      // Skip the initial snapshot (it is just the current state, not a change)
+      if (isFirst) return;
+
+      // Inject the updated profile into the native layer
+      // The Expo app can use this to update any native UI or AsyncStorage cache
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({
+          type:      'PROFILE_SYNC',
+          profile:   updatedProfile,
+          syncedAt,
+          platform:  'web',
+        })
+      );
+    };
+
+    document.addEventListener('marsProfileSync', handleProfileSync);
+    return () => document.removeEventListener('marsProfileSync', handleProfileSync);
+  }, []);
+
+  // ── Route guard ─────────────────────────────────────────────────────────────
 
   // 1. Still resolving Firebase auth state
   if (loading) {

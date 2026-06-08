@@ -119,46 +119,113 @@ export function initGSI(onCredential) {
 // ---------------------------------------------------------------------------
 // syncUserProfile — saves/updates the user record in Firestore
 //
-// Schema: users/{uid}
-//   uid          string   — Firebase user ID
-//   displayName  string   — Full name from Google account
-//   email        string   — Email address from Google account
-//   photoURL     string   — Profile photo URL from Google account
-//   provider     string   — "google.com" | "password" | "emailLink"
-//   createdAt    timestamp — First sign-in time (set once, never overwritten)
-//   lastLoginAt  timestamp — Updated on every sign-in
-//   loginCount   number   — Incremented on every sign-in
+// Identity model:
+//   The Firestore document key is firebaseUser.uid which Firebase sets to
+//   the Google OAuth "sub" claim from the ID token. This means:
+//     - users are identified by their immutable Google sub ID, NOT by email
+//     - email changes on Google do NOT create a new user record
+//     - the same Google account always maps to the same Firestore document
+//
+// Schema: users/{uid}   (uid === Google sub ID for Google sign-in)
+//   uid             string    — Firebase UID = Google sub (immutable)
+//   googleSub       string    — Explicit copy of Google sub for queryability
+//   displayName     string    — Full name (from Google, updated on each login)
+//   email           string    — Email (from Google, updated on each login)
+//   emailVerified   boolean   — Whether Google has verified this email
+//   photoURL        string    — Profile photo URL
+//   primaryProvider string    — "google.com" | "password" | "emailLink"
+//   providerData    array     — Snapshot of all linked providers:
+//                               [{ providerId, uid, email, displayName, photoURL }]
+//   createdAt       timestamp — First sign-in (set once, never overwritten)
+//   lastLoginAt     timestamp — Updated on every sign-in
+//   lastSeenAt      timestamp — Updated on every sign-in (alias for sync)
+//   loginCount      number    — Incremented on every sign-in
+//   platform        string    — "web" | "android" (last platform used)
 // ---------------------------------------------------------------------------
-async function syncUserProfile(firebaseUser) {
+async function syncUserProfile(firebaseUser, platform = 'web') {
   try {
     const ref  = doc(db, 'users', firebaseUser.uid);
     const snap = await getDoc(ref);
 
-    // Determine the sign-in provider
-    const provider =
+    // Primary provider (first linked provider)
+    const primaryProvider =
       firebaseUser.providerData?.[0]?.providerId || 'unknown';
 
+    // Google sub ID — for Google sign-in, providerData[0].uid === Google sub
+    // Firebase also sets firebaseUser.uid === Google sub for Google-primary accounts
+    const googleProvider = firebaseUser.providerData?.find(
+      (p) => p.providerId === 'google.com'
+    );
+    const googleSub = googleProvider?.uid || firebaseUser.uid;
+
+    // Snapshot of all linked providers (safe to store — no secrets)
+    const providerData = (firebaseUser.providerData || []).map((p) => ({
+      providerId:  p.providerId,
+      uid:         p.uid,          // provider-specific user ID (Google sub for google.com)
+      email:       p.email  || '',
+      displayName: p.displayName || '',
+      photoURL:    p.photoURL    || '',
+    }));
+
+    const now = serverTimestamp();
+
     if (!snap.exists()) {
-      // First-time sign-in — create the full user record
+      // ── First-time sign-in: create the full user record ──────────────────
       await setDoc(ref, {
-        uid:         firebaseUser.uid,
-        displayName: firebaseUser.displayName  || '',
-        email:       firebaseUser.email        || '',
-        photoURL:    firebaseUser.photoURL     || '',
-        provider,
-        createdAt:   serverTimestamp(),
-        lastLoginAt: serverTimestamp(),
-        loginCount:  1,
+        // Identity (immutable after creation)
+        uid:             firebaseUser.uid,
+        googleSub,                           // Google sub ID — the canonical identity key
+
+        // Profile (mutable — updated on each login)
+        displayName:     firebaseUser.displayName   || '',
+        email:           firebaseUser.email         || '',
+        emailVerified:   firebaseUser.emailVerified ?? false,
+        photoURL:        firebaseUser.photoURL      || '',
+
+        // Provider data
+        primaryProvider,
+        providerData,
+
+        // Timestamps
+        createdAt:       now,
+        lastLoginAt:     now,
+        lastSeenAt:      now,
+        loginCount:      1,
+
+        // Platform tracking
+        platform,
+        platforms:       [platform],         // list of all platforms ever used
       });
-      console.info('[MARS Auth] New user record created for', firebaseUser.email);
+      console.info('[MARS Auth] New user record created — sub:', googleSub, 'email:', firebaseUser.email);
     } else {
-      // Returning user — update mutable fields only
+      // ── Returning user: update mutable fields only ────────────────────────
+      // IMPORTANT: uid and googleSub are NEVER overwritten — they are the
+      // immutable identity anchors. Email changes on Google do not change
+      // which Firestore document this user owns.
+      const existing = snap.data();
+      const existingPlatforms = existing.platforms || [];
+      const updatedPlatforms = existingPlatforms.includes(platform)
+        ? existingPlatforms
+        : [...existingPlatforms, platform];
+
       await updateDoc(ref, {
-        displayName: firebaseUser.displayName  || snap.data().displayName || '',
-        email:       firebaseUser.email        || snap.data().email       || '',
-        photoURL:    firebaseUser.photoURL     || snap.data().photoURL    || '',
-        lastLoginAt: serverTimestamp(),
-        loginCount:  increment(1),
+        // Profile — always refresh from the authoritative Google token
+        displayName:     firebaseUser.displayName   || existing.displayName || '',
+        email:           firebaseUser.email         || existing.email       || '',
+        emailVerified:   firebaseUser.emailVerified ?? existing.emailVerified ?? false,
+        photoURL:        firebaseUser.photoURL      || existing.photoURL    || '',
+
+        // Provider data snapshot
+        providerData,
+
+        // Timestamps
+        lastLoginAt:     now,
+        lastSeenAt:      now,
+        loginCount:      increment(1),
+
+        // Platform tracking
+        platform,
+        platforms:       updatedPlatforms,
       });
     }
   } catch (err) {

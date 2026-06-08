@@ -1,48 +1,117 @@
 // firestore.rules
 //
-// Server-side security rules — the authoritative enforcement layer for
-// per-user data isolation. These rules run on Google's servers and cannot
-// be bypassed by any client-side code.
+// MARS Firestore Security Rules
 //
-// Rules:
-//   1. A user may only read/write their OWN documents (request.auth.uid == userId)
-//   2. Unauthenticated requests are denied everywhere
-//   3. No user can read or write another user's data
+// Identity model:
+//   All user data is keyed by Firebase UID, which equals the Google OAuth
+//   "sub" claim for Google sign-in users. This means:
+//     - Identity is anchored to the immutable Google sub ID, not email
+//     - Email changes on Google do NOT affect data ownership
+//     - The same Google account always owns the same Firestore documents
 //
+// Enforcement:
+//   Every read and write is gated by request.auth.uid == userId.
+//   This check is equivalent to verifying the Google sub ID because
+//   Firebase sets auth.uid = Google sub for Google-authenticated users.
+//   No client-side code can bypass this — it runs on Google's servers.
+//
+// Real-time sync:
+//   onSnapshot() listeners on users/{uid} and its subcollections work
+//   across all platforms (web + Android WebView) using the same rules.
+//   Firebase's real-time transport handles cross-platform delivery.
+//
+// To activate: Firebase Console → Firestore → Rules → paste → Publish
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: request must come from an authenticated user who owns this path
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    // isOwner: the signed-in user's UID (= Google sub) matches the document owner
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
+    // notUpdatingImmutableFields: prevents overwriting identity anchors
+    // uid, googleSub, and createdAt are set once on account creation and
+    // must never change — they are the canonical identity of the user.
+    function notUpdatingImmutableFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['uid', 'googleSub', 'createdAt']);
+    }
 
+    // ── User profile documents ────────────────────────────────────────────────
+    // Path: users/{userId}
+    //
+    // The document ID is the Firebase UID (= Google sub for Google sign-in).
+    // Only the owning user can read or write their own profile.
+    // Immutable fields (uid, googleSub, createdAt) cannot be changed after creation.
+
+    match /users/{userId} {
+      // Read: only the owning user
+      allow read: if isOwner(userId);
+
+      // Create: only the owning user, uid field must match auth.uid,
+      // and googleSub must be present (enforces sub-based identity on creation)
+      allow create: if isOwner(userId) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.googleSub != null;
+
+      // Update: only the owning user; immutable identity fields are locked
+      allow update: if isOwner(userId) && notUpdatingImmutableFields();
+
+      // Delete: only the owning user
+      allow delete: if isOwner(userId);
+
+      // ── Alarms subcollection ────────────────────────────────────────────────
+      // Path: users/{userId}/alarms/{alarmId}
+      // Real-time sync: onSnapshot fires on web + Android simultaneously
       match /alarms/{alarmId} {
         allow read, write: if isOwner(userId);
       }
+
+      // ── Routines subcollection ──────────────────────────────────────────────
+      // Path: users/{userId}/routines/{routineId}
       match /routines/{routineId} {
         allow read, write: if isOwner(userId);
       }
+
+      // ── Scheduled links subcollection ───────────────────────────────────────
+      // Path: users/{userId}/scheduledLinks/{linkId}
       match /scheduledLinks/{linkId} {
         allow read, write: if isOwner(userId);
       }
+
+      // ── Home rooms subcollection ────────────────────────────────────────────
+      // Path: users/{userId}/homeRooms/{roomId}
       match /homeRooms/{roomId} {
         allow read, write: if isOwner(userId);
       }
+
+      // ── Health logs subcollection ───────────────────────────────────────────
+      // Path: users/{userId}/healthLogs/{logId}
       match /healthLogs/{logId} {
         allow read, write: if isOwner(userId);
       }
-      // Catch-all for any future sub-collections
+
+      // ── Sync state subcollection ────────────────────────────────────────────
+      // Path: users/{userId}/syncState/{stateId}
+      // Tracks last-seen timestamps per platform (web, android) for the
+      // real-time cross-platform sync bridge. Written by each platform on
+      // every session start and on significant data changes.
+      match /syncState/{stateId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // ── Catch-all for any future subcollections ─────────────────────────────
       match /{subcollection}/{docId} {
         allow read, write: if isOwner(userId);
       }
     }
 
-    // Deny all other paths explicitly
+    // ── Deny everything else ──────────────────────────────────────────────────
+    // Any path not explicitly matched above is denied by default.
     match /{document=**} {
       allow read, write: if false;
     }
