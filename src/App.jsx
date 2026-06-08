@@ -20,7 +20,8 @@ import './styles/global.css';
 import './App.css';
 
 function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Start closed on mobile so content is the first thing the user sees
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700);
   const isWebView = /MARS-App|wv|WebView/.test(navigator.userAgent) ||
     (navigator.userAgent.includes('Android') && /Version\/\d/.test(navigator.userAgent));
 

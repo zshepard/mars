@@ -104,36 +104,6 @@
   .clock-time    { font-size: 1.1rem; }
 }
 
-/* ── Sync pill ────────────────────────────────────────────────── */
-.sync-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  color: var(--text2);
-  transition:
-    border-color var(--transition),
-    color var(--transition),
-    background var(--transition);
-}
-.sync-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  transition: background var(--transition);
-}
-.sync-pill.online  .sync-dot { background: var(--green); animation: pulse 2s infinite; }
-.sync-pill.offline .sync-dot { background: var(--amber); }
-.sync-pill.offline { border-color: rgba(240,200,96,0.3); color: var(--amber); }
-
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
-}
-
 /* ── Right cluster ────────────────────────────────────────────── */
 .topbar-right {
   display: flex;
@@ -141,27 +111,6 @@
   gap: 8px;
   position: relative;
 }
-
-.notif-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--amber);
-  padding: 6px 8px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  transition:
-    background var(--t-fast),
-    border-color var(--t-fast),
-    transform var(--t-fast);
-}
-.notif-btn:hover {
-  background: var(--bg3);
-  border-color: var(--border2);
-  transform: translateY(-1px);
-}
-.notif-btn:active { transform: scale(0.93); }
 
 /* ── Avatar ───────────────────────────────────────────────────── */
 .avatar-btn {
