@@ -1,0 +1,52 @@
+/* src/components/SwipeItem.css */
+
+.swipe-item-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+/* The sliding foreground layer */
+.swipe-item-content {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+  background: transparent;
+}
+
+/* Snap transition only on touch-end, not during drag */
+.swipe-item-content.dragging {
+  transition: none;
+}
+
+/* Red delete zone revealed behind */
+.swipe-item-delete {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: #e05252;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 0 10px 10px 0;
+  z-index: 0;
+  transition: background 0.15s;
+}
+.swipe-item-delete i {
+  font-size: 18px;
+}
+.swipe-item-delete:hover {
+  background: #c94040;
+}
+.swipe-item-delete:active {
+  background: #b03030;
+}

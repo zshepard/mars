@@ -5,6 +5,8 @@ import { useAlarms }         from '../hooks/useAlarms';
 import { useAlarmTimer }     from '../hooks/useAlarmTimer';
 import { useScheduledLinks } from '../hooks/useScheduledLinks';
 import { useRoutines, DEFAULT_STEPS } from '../hooks/useRoutines';
+import { useSwipe }          from '../hooks/useSwipe';
+import SwipeItem             from '../components/SwipeItem';
 import './Alarms.css';
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -283,7 +285,14 @@ export default function Alarms() {
   const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
   const { linkCountdowns } = useLinkTimer(links);
 
+  const TABS = ['alarms', 'links', 'routines'];
   const [tab, setTab] = useState('alarms'); // 'alarms' | 'links' | 'routines'
+
+  // Swipe left/right to switch tabs
+  const swipeTabHandlers = useSwipe({
+    onSwipeLeft:  () => setTab(t => { const i = TABS.indexOf(t); return TABS[Math.min(i + 1, TABS.length - 1)]; }),
+    onSwipeRight: () => setTab(t => { const i = TABS.indexOf(t); return TABS[Math.max(i - 1, 0)]; }),
+  });
 
   // ── Alarm add/edit state ──────────────────────────────────────────
   const [showAlarmForm, setShowAlarmForm] = useState(false);
@@ -381,7 +390,7 @@ export default function Alarms() {
   };
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap" {...swipeTabHandlers}>
 
       {/* ── Alarm Firing Overlay ────────────────────────────────── */}
       {firingAlarm && (
@@ -488,6 +497,7 @@ export default function Alarms() {
                       saving={editAlarmSaving}
                     />
                   ) : (
+                    <SwipeItem onDelete={() => deleteAlarm(alarm.id)} label="Delete">
                     <div className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
                       <div className="alarm-time-block">
                         <div className="alarm-time">{alarm.time}</div>
@@ -530,6 +540,7 @@ export default function Alarms() {
                         </button>
                       </div>
                     </div>
+                    </SwipeItem>
                   )}
                 </div>
               ))}
@@ -579,6 +590,7 @@ export default function Alarms() {
                       saving={editLinkSaving}
                     />
                   ) : (
+                    <SwipeItem onDelete={() => deleteLink(link.id)} label="Delete">
                     <div className={`alarm-row card ${link.enabled ? '' : 'disabled'}`}>
                       <div className="alarm-time-block">
                         <div className="alarm-time">{link.time}</div>
@@ -615,6 +627,7 @@ export default function Alarms() {
                         </button>
                       </div>
                     </div>
+                    </SwipeItem>
                   )}
                 </div>
               ))}
@@ -711,7 +724,8 @@ export default function Alarms() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {routines.map(r => (
-                <div key={r.id} className="card routine-card">
+                <SwipeItem key={r.id} onDelete={() => deleteRoutine(r.id)} label="Delete">
+                <div className="card routine-card">
                   <div className="routine-header">
                     <div>
                       <div className="routine-name">{r.name}</div>
@@ -750,6 +764,7 @@ export default function Alarms() {
                     ))}
                   </div>
                 </div>
+                </SwipeItem>
               ))}
             </div>
           )}
