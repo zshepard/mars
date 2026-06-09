@@ -65,29 +65,55 @@ export function useAlarms(uid) {
       setLoading(false);
       return;
     }
+    // Wait for a real uid before touching Firestore
+    if (!uid || uid === GUEST_ID) return;
     guestRegistered.current = false;
-    const q = query(
-      collection(db, 'users', uid, 'alarms'),
-      orderBy('time', 'asc')
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setAlarms(data);
-      setLoading(false);
-      // Re-register all enabled alarms with SW on every snapshot
-      data.forEach((alarm) => {
-        if (alarm.enabled !== false) {
-          scheduleAlarm({
-            alarm_id: alarm.id,
-            fire_at:  nextFireTime(alarm.time, alarm.days),
-            payload:  { ...alarm },
+
+    let unsub = null;
+    let retryTimer = null;
+
+    const subscribe = (attempt = 0) => {
+      const q = query(
+        collection(db, 'users', uid, 'alarms'),
+        orderBy('time', 'asc')
+      );
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setAlarms(data);
+          setLoading(false);
+          // Re-register all enabled alarms with SW on every snapshot
+          data.forEach((alarm) => {
+            if (alarm.enabled !== false) {
+              scheduleAlarm({
+                alarm_id: alarm.id,
+                fire_at:  nextFireTime(alarm.time, alarm.days),
+                payload:  { ...alarm },
+              });
+            } else {
+              cancelAlarm(alarm.id);
+            }
           });
-        } else {
-          cancelAlarm(alarm.id);
+        },
+        (err) => {
+          // permission-denied fires briefly after reload while auth token restores
+          console.warn('[useAlarms] onSnapshot error (attempt', attempt, '):', err.code);
+          if (err.code === 'permission-denied' && attempt < 6) {
+            const delay = Math.min(800 * Math.pow(2, attempt), 20000);
+            retryTimer = setTimeout(() => subscribe(attempt + 1), delay);
+          } else {
+            setLoading(false);
+          }
         }
-      });
-    });
-    return unsub;
+      );
+    };
+
+    subscribe();
+    return () => {
+      if (unsub) unsub();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [uid, isGuest]);
 
   // ── BUG FIX #3: Re-register guest alarms only ONCE on mount,

@@ -76,25 +76,50 @@ export function useRoutines(uid) {
       setLoading(false);
       return;
     }
+    // Wait for a real uid before touching Firestore
+    if (!uid || uid === GUEST_ID) return;
+
     const q = query(
       collection(db, 'users', uid, 'routines'),
       orderBy('createdAt', 'asc')
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setRoutines(data);
-      setLoading(false);
 
-      // Re-register all active routines with trigger times
-      data.forEach((r) => {
-        if (r.active !== false && r.triggerTime) {
-          scheduleRoutineTrigger(r);
-        } else {
-          cancelRoutineTrigger(r.id);
+    let unsub = null;
+    let retryTimer = null;
+
+    const subscribe = (attempt = 0) => {
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setRoutines(data);
+          setLoading(false);
+          // Re-register all active routines with trigger times
+          data.forEach((r) => {
+            if (r.active !== false && r.triggerTime) {
+              scheduleRoutineTrigger(r);
+            } else {
+              cancelRoutineTrigger(r.id);
+            }
+          });
+        },
+        (err) => {
+          console.warn('[useRoutines] onSnapshot error (attempt', attempt, '):', err.code);
+          if (err.code === 'permission-denied' && attempt < 6) {
+            const delay = Math.min(800 * Math.pow(2, attempt), 20000);
+            retryTimer = setTimeout(() => subscribe(attempt + 1), delay);
+          } else {
+            setLoading(false);
+          }
         }
-      });
-    });
-    return unsub;
+      );
+    };
+
+    subscribe();
+    return () => {
+      if (unsub) unsub();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [uid, isGuest]);
 
   // ── Re-register local (guest) routines on load ─────────────────

@@ -29,24 +29,50 @@ export function useScheduledLinks(uid) {
       setLoading(false);
       return;
     }
+    // Wait for a real uid before touching Firestore
+    if (!uid || uid === GUEST_ID) return;
     guestRegistered.current = false;
+
     const q = query(
       collection(db, 'users', uid, 'scheduledLinks'),
       orderBy('time', 'asc')
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setLinks(data);
-      setLoading(false);
-      data.forEach((link) => {
-        if (link.enabled !== false) {
-          scheduleLink({ link_id: link.id, time: link.time, days: link.days, url: link.url, device: link.device });
-        } else {
-          cancelLink(link.id);
+
+    let unsub = null;
+    let retryTimer = null;
+
+    const subscribe = (attempt = 0) => {
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setLinks(data);
+          setLoading(false);
+          data.forEach((link) => {
+            if (link.enabled !== false) {
+              scheduleLink({ link_id: link.id, time: link.time, days: link.days, url: link.url, device: link.device });
+            } else {
+              cancelLink(link.id);
+            }
+          });
+        },
+        (err) => {
+          console.warn('[useScheduledLinks] onSnapshot error (attempt', attempt, '):', err.code);
+          if (err.code === 'permission-denied' && attempt < 6) {
+            const delay = Math.min(800 * Math.pow(2, attempt), 20000);
+            retryTimer = setTimeout(() => subscribe(attempt + 1), delay);
+          } else {
+            setLoading(false);
+          }
         }
-      });
-    });
-    return unsub;
+      );
+    };
+
+    subscribe();
+    return () => {
+      if (unsub) unsub();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [uid, isGuest]);
 
   // ── BUG FIX #3: Register guest links only once on mount ────────
