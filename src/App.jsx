@@ -33,6 +33,12 @@ function AppShell() {
       const pack = getPackById(savedId);
       if (pack?.background) {
         document.documentElement.style.setProperty('--app-bg-override', pack.background);
+        // Restore any CSS variable overrides (e.g. MARS Red accent color)
+        if (pack.cssVars) {
+          Object.entries(pack.cssVars).forEach(([k, v]) => {
+            document.documentElement.style.setProperty(k, v);
+          });
+        }
       }
     }
   }, []);

@@ -337,6 +337,91 @@ export const BACKGROUND_PACKS = [
       },
     ],
   },
+
+  /* ─── MARS THEMES ─────────────────────────────────────────────────────── */
+  {
+    section: 'MARS THEMES',
+    packs: [
+      {
+        id: 'mars-red',
+        label: 'MARS Red',
+        preview: 'linear-gradient(135deg, #0d1117 0%, #1a0a0a 40%, #e63946 70%, #ff6b35 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(230,57,70,0.18) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 70%, rgba(193,68,14,0.15) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 80%, rgba(255,107,53,0.10) 0%, transparent 45%),
+          radial-gradient(ellipse at 50% 50%, rgba(13,17,23,1) 0%, transparent 80%),
+          #0d1117`,
+        cssVars: {
+          '--green':     '#e63946',
+          '--green-dim': 'rgba(230,57,70,0.15)',
+          '--bg':        '#0d1117',
+          '--bg2':       '#13191f',
+          '--bg3':       '#1a2030',
+          '--border':    'rgba(230,57,70,0.18)',
+          '--border2':   'rgba(230,57,70,0.32)',
+          '--text':      '#f0e6e6',
+          '--text2':     '#c4a8a8',
+          '--text3':     '#8a6060',
+        },
+      },
+      {
+        id: 'mars-deep-space',
+        label: 'MARS Deep Space',
+        preview: 'linear-gradient(135deg, #080c14 0%, #0f1624 40%, #c1440e 65%, #ff6b35 85%, #ffd580 100%)',
+        background: `
+          radial-gradient(ellipse at 55% 25%, rgba(193,68,14,0.22) 0%, transparent 50%),
+          radial-gradient(ellipse at 15% 60%, rgba(230,57,70,0.12) 0%, transparent 45%),
+          radial-gradient(ellipse at 85% 75%, rgba(255,107,53,0.14) 0%, transparent 40%),
+          radial-gradient(ellipse at 40% 90%, rgba(255,213,128,0.06) 0%, transparent 35%),
+          repeating-linear-gradient(
+            0deg,
+            transparent 0px, transparent 3px,
+            rgba(193,68,14,0.03) 3px, rgba(193,68,14,0.03) 4px
+          ),
+          #080c14`,
+        cssVars: {
+          '--green':     '#ff6b35',
+          '--green-dim': 'rgba(255,107,53,0.15)',
+          '--bg':        '#080c14',
+          '--bg2':       '#0f1624',
+          '--bg3':       '#161e30',
+          '--border':    'rgba(193,68,14,0.20)',
+          '--border2':   'rgba(255,107,53,0.35)',
+          '--text':      '#ffe8d6',
+          '--text2':     '#c49070',
+          '--text3':     '#8a5040',
+        },
+      },
+      {
+        id: 'mars-ember',
+        label: 'MARS Ember',
+        preview: 'linear-gradient(135deg, #100808 0%, #2a0e0e 40%, #8b0000 65%, #e63946 85%, #ff6b35 100%)',
+        background: `
+          radial-gradient(ellipse at 50% 40%, rgba(139,0,0,0.35) 0%, transparent 60%),
+          radial-gradient(ellipse at 20% 20%, rgba(230,57,70,0.20) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 80%, rgba(255,107,53,0.18) 0%, transparent 45%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(139,0,0,0.06) 0px, rgba(139,0,0,0.06) 1px,
+            transparent 1px, transparent 8px
+          ),
+          #100808`,
+        cssVars: {
+          '--green':     '#e63946',
+          '--green-dim': 'rgba(230,57,70,0.18)',
+          '--bg':        '#100808',
+          '--bg2':       '#1a0e0e',
+          '--bg3':       '#241414',
+          '--border':    'rgba(139,0,0,0.30)',
+          '--border2':   'rgba(230,57,70,0.45)',
+          '--text':      '#ffe0e0',
+          '--text2':     '#c48080',
+          '--text3':     '#8a4040',
+        },
+      },
+    ],
+  },
 ];
 
 /** Flat list of all packs for easy lookup by id */

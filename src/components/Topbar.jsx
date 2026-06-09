@@ -74,10 +74,11 @@ export default function Topbar({ onMenuToggle, hideBurger = false }) {
 
       {/* Brand */}
       <div className="topbar-brand">
-        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
-          <path d="M12 24 L24 12 L36 24 L24 36 Z" fill="none" stroke="#1D9E75" strokeWidth="2.5"/>
-          <circle cx="24" cy="24" r="5" fill="#1D9E75"/>
-        </svg>
+        <img
+          src="/mars-logo.webp"
+          alt="MARS"
+          className="topbar-logo-img"
+        />
         <span>MARS</span>
       </div>
 

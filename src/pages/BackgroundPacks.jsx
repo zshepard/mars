@@ -8,14 +8,28 @@ export default function BackgroundPacks() {
   const [selected, setSelected] = useState(() => localStorage.getItem(STORAGE_KEY) || 'default-dark');
   const [preview, setPreview]   = useState(null); // id of the pack being hovered/previewed
 
-  /* Apply background to the root element */
+  /* Apply background + optional CSS variable overrides to the root element */
   function applyBackground(packId) {
     const pack = getPackById(packId);
     const root = document.documentElement;
+
+    // Reset all theme-overridable vars first
+    const THEME_VARS = [
+      '--green','--green-dim','--bg','--bg2','--bg3',
+      '--border','--border2','--text','--text2','--text3',
+    ];
+    THEME_VARS.forEach(v => root.style.removeProperty(v));
+
     if (!pack || !pack.background) {
       root.style.removeProperty('--app-bg-override');
     } else {
       root.style.setProperty('--app-bg-override', pack.background);
+      // Apply any custom CSS variable overrides (e.g. MARS Red accent color)
+      if (pack.cssVars) {
+        Object.entries(pack.cssVars).forEach(([k, v]) => {
+          root.style.setProperty(k, v);
+        });
+      }
     }
   }
 
