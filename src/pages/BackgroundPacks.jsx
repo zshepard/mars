@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BACKGROUND_PACKS, getPackById } from '../data/backgroundPacks';
+import { useAuth }        from '../hooks/useAuth';
+import { usePreferences } from '../hooks/usePreferences';
 import './BackgroundPacks.css';
 
-const STORAGE_KEY = 'mars-background-pack';
-
 export default function BackgroundPacks() {
-  const [selected, setSelected] = useState(() => localStorage.getItem(STORAGE_KEY) || 'default-dark');
+  const { user } = useAuth();
+  const { prefs, updatePref } = usePreferences(user);
+  const [selected, setSelected] = useState(() => localStorage.getItem('mars-background-pack') || 'default-dark');
   const [preview, setPreview]   = useState(null); // id of the pack being hovered/previewed
 
   /* Apply background + optional CSS variable overrides to the root element */
@@ -38,9 +40,17 @@ export default function BackgroundPacks() {
     applyBackground(selected);
   }, []); // eslint-disable-line
 
+  // Sync selected state when Firestore prefs load (cross-device sync)
+  useEffect(() => {
+    if (prefs.backgroundPack && prefs.backgroundPack !== selected) {
+      setSelected(prefs.backgroundPack);
+      applyBackground(prefs.backgroundPack);
+    }
+  }, [prefs.backgroundPack]); // eslint-disable-line
+
   function handleSelect(packId) {
     setSelected(packId);
-    localStorage.setItem(STORAGE_KEY, packId);
+    updatePref('backgroundPack', packId); // writes to Firestore + mirrors to localStorage
     applyBackground(packId);
     setPreview(null);
   }

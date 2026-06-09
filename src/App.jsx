@@ -25,19 +25,26 @@ function AppShell() {
 
   // Restore saved background pack on every app load
   useEffect(() => {
-    const savedId = localStorage.getItem('mars-background-pack');
-    if (savedId) {
-      const pack = getPackById(savedId);
-      if (pack?.background) {
-        document.documentElement.style.setProperty('--app-bg-override', pack.background);
-        // Restore any CSS variable overrides (e.g. MARS Red accent color)
-        if (pack.cssVars) {
-          Object.entries(pack.cssVars).forEach(([k, v]) => {
-            document.documentElement.style.setProperty(k, v);
-          });
-        }
+    function applyPack(packId) {
+      const pack = getPackById(packId);
+      if (!pack) return;
+      const root = document.documentElement;
+      if (pack.background) {
+        root.style.setProperty('--app-bg-override', pack.background);
+      } else {
+        root.style.removeProperty('--app-bg-override');
+      }
+      if (pack.cssVars) {
+        Object.entries(pack.cssVars).forEach(([k, v]) => root.style.setProperty(k, v));
       }
     }
+    // Apply on mount from localStorage
+    const savedId = localStorage.getItem('mars-background-pack');
+    if (savedId) applyPack(savedId);
+    // Also apply when Firestore sync updates the pref (cross-device / refresh)
+    const handler = (e) => applyPack(e.detail);
+    window.addEventListener('mars:background-pack-changed', handler);
+    return () => window.removeEventListener('mars:background-pack-changed', handler);
   }, []);
 
   // ── Swipe to open/close sidebar (desktop only — mobile uses BottomNav) ──

@@ -1,9 +1,10 @@
 // src/pages/Settings.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth }  from '../hooks/useAuth';
-import { useMars }  from '../hooks/useMars';
-import { getPackById } from '../data/backgroundPacks';
+import { useAuth }         from '../hooks/useAuth';
+import { useMars }         from '../hooks/useMars';
+import { usePreferences }  from '../hooks/usePreferences';
+import { getPackById }     from '../data/backgroundPacks';
 import './Settings.css';
 
 export default function Settings() {
@@ -16,45 +17,27 @@ export default function Settings() {
     isOnline,
   } = useMars();
   const navigate                                            = useNavigate();
-  // Hey MARS toggle — synced with useWakeWord localStorage key
-  const [voiceEnabled, setVoiceEnabled] = useState(() => {
-    try { return localStorage.getItem('mars-hey-mars') !== 'false'; } catch { return true; }
-  });
-  const handleVoiceEnabled = (val) => {
-    try { localStorage.setItem('mars-hey-mars', val ? 'true' : 'false'); } catch (_) {}
-    setVoiceEnabled(val);
-    // Notify useWakeWord hook to start/stop without page reload
-    window.dispatchEvent(new CustomEvent('mars:hey-mars-toggle', { detail: val }));
-  };
-  const [voiceWakeWord, setVoiceWakeWord] = useState('Hey MARS');
-  const [defaultDevice, setDefaultDevice]                  = useState('phone');
-  // eslint-disable-next-line no-unused-vars
-  const [theme, setTheme]                                  = useState('dark');
 
-  // 12/24hr clock format — persisted to localStorage
-  const [use24hr, setUse24hr] = useState(
-    () => localStorage.getItem('mars-clock-24hr') === 'true'
-  );
+  // ── Synced preferences (Firestore + localStorage mirror) ────────────────────
+  const { prefs, updatePref } = usePreferences(user);
 
-  // Snooze duration — persisted to localStorage
-  const [snoozeDuration, setSnoozeDuration] = useState(
-    () => parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10)
-  );
+  // Derived convenience values
+  const voiceEnabled   = prefs.heyMars;
+  const use24hr        = prefs.clockFormat === '24';
+  const snoozeDuration = prefs.snoozeDuration;
+  const currentPack    = getPackById(prefs.backgroundPack || 'default-dark');
+
+  const handleVoiceEnabled = (val) => updatePref('heyMars', val);
   const handleSnoozeDuration = (val) => {
     const n = Math.max(1, Math.min(60, parseInt(val, 10) || 5));
-    setSnoozeDuration(n);
-    localStorage.setItem('mars-snooze-duration', String(n));
+    updatePref('snoozeDuration', n);
   };
+  const toggleClockFormat = () => updatePref('clockFormat', use24hr ? '12' : '24');
 
-  const toggleClockFormat = () => {
-    const next = !use24hr;
-    setUse24hr(next);
-    localStorage.setItem('mars-clock-24hr', String(next));
-    // Notify Topbar clock to re-read the setting immediately
-    window.dispatchEvent(new CustomEvent('mars:clock-format-changed'));
-  };
-
-  const currentPack = getPackById(localStorage.getItem('mars-background-pack') || 'default-dark');
+  const [voiceWakeWord, setVoiceWakeWord] = useState('Hey MARS');
+  const [defaultDevice, setDefaultDevice] = useState('phone');
+  // eslint-disable-next-line no-unused-vars
+  const [theme, setTheme] = useState('dark');
 
   // ── Account editing state ──────────────────────────────────────────────────
   const [editingUsername, setEditingUsername] = useState(false);
