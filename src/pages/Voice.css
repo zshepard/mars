@@ -1,6 +1,27 @@
 /* src/pages/Voice.css */
-.voice-card { text-align: center; margin-bottom: 20px; padding: 32px; }
-.voice-circle-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+
+/* ── Page ──────────────────────────────────────────────────────── */
+.voice-page { max-width: 680px; }
+
+/* ── Mic card ──────────────────────────────────────────────────── */
+.voice-card {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 32px 24px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Circle ────────────────────────────────────────────────────── */
+.voice-circle-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 120px;
+  height: 120px;
+}
 .voice-circle {
   width: 80px;
   height: 80px;
@@ -8,33 +29,239 @@
   background: var(--green-dim);
   border: 2px solid var(--green);
   color: var(--green);
-  font-size: 32px;
+  font-size: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition);
+  transition: all 0.2s ease;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  cursor: pointer;
 }
-.voice-circle.listening { background: var(--green); color: #fff; }
+.voice-circle:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: 0 0 20px var(--green-dim);
+}
+.voice-circle:disabled { opacity: 0.4; cursor: not-allowed; }
+.voice-circle.listening {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 0 24px var(--green);
+}
+.voice-circle.continuous {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 128, 0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(0, 255, 128, 0); }
+}
+
+/* ── Rings ─────────────────────────────────────────────────────── */
 .voice-ring {
   position: absolute;
-  width: 100px;
-  height: 100px;
   border-radius: 50%;
-  border: 2px solid var(--green);
-  animation: ring 1.2s ease-out infinite;
-  opacity: 0.5;
+  border: 1.5px solid var(--green);
+  animation: ring-expand 1.6s ease-out infinite;
+  opacity: 0;
 }
-@keyframes ring {
-  from { transform: scale(0.8); opacity: 0.8; }
-  to   { transform: scale(1.4); opacity: 0; }
-}
-.voice-prompt { font-size: 14px; color: var(--text2); margin-bottom: 12px; }
-.voice-transcript { font-size: 15px; color: var(--text); font-weight: 500; margin-bottom: 12px; }
-.voice-hey { color: var(--green); }
-.voice-note { font-size: 12px; color: var(--text3); line-height: 1.6; }
+.voice-ring--1 { width: 96px;  height: 96px;  animation-delay: 0s; }
+.voice-ring--2 { width: 116px; height: 116px; animation-delay: 0.5s; }
 
+@keyframes ring-expand {
+  0%   { transform: scale(0.7); opacity: 0.6; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+
+/* ── Waveform ──────────────────────────────────────────────────── */
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 28px;
+  margin-bottom: 10px;
+}
+.wave-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--green);
+  height: 6px;
+  transition: height 0.15s ease;
+}
+.waveform.active .wave-bar {
+  animation: wave 0.8s ease-in-out infinite alternate;
+}
+@keyframes wave {
+  from { height: 4px; }
+  to   { height: 22px; }
+}
+
+/* ── Status / transcript ───────────────────────────────────────── */
+.voice-prompt {
+  font-size: 14px;
+  color: var(--text2);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.voice-interim {
+  font-size: 13px;
+  color: var(--text3);
+  font-style: italic;
+  margin-bottom: 8px;
+  min-height: 20px;
+  animation: fade-in 0.15s ease;
+}
+.voice-transcript-block { margin-bottom: 10px; }
+.voice-transcript {
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 6px;
+  animation: fade-in 0.2s ease;
+}
+.voice-hey { color: var(--green); }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Confidence bar ────────────────────────────────────────────── */
+.conf-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.conf-bar-track {
+  width: 120px;
+  height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.conf-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.conf-pct {
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 30px;
+  text-align: left;
+}
+
+/* ── Result banner ─────────────────────────────────────────────── */
+.voice-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  animation: fade-in 0.2s ease;
+}
+.voice-result.success {
+  background: rgba(0, 255, 128, 0.08);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 128, 0.2);
+}
+.voice-result.fail {
+  background: rgba(230, 57, 70, 0.08);
+  color: #e63946;
+  border: 1px solid rgba(230, 57, 70, 0.2);
+}
+.result-category {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text3);
+  margin-left: 4px;
+}
+
+/* ── Controls ──────────────────────────────────────────────────── */
+.voice-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.voice-note {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Always-on badge ───────────────────────────────────────────── */
+.badge-pulse {
+  background: rgba(0, 255, 128, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 128, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  animation: badge-blink 2s ease-in-out infinite;
+}
+@keyframes badge-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+.voice-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+.voice-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.voice-tab.active {
+  background: var(--bg3);
+  color: var(--text);
+}
+.voice-tab .tab-badge {
+  background: var(--green-dim);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ── Search ────────────────────────────────────────────────────── */
 .search-input {
   width: 100%;
   padding: 10px 14px;
@@ -44,12 +271,121 @@
   color: var(--text);
   font-size: 13px;
   outline: none;
+  box-sizing: border-box;
 }
 .search-input:focus { border-color: var(--green); }
 .search-input::placeholder { color: var(--text3); }
 
-.cmd-list { display: flex; flex-direction: column; gap: 8px; }
-.cmd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.cmd-phrase { font-size: 13px; color: var(--text); }
+/* ── Command categories ────────────────────────────────────────── */
+.cmd-category { margin-bottom: 20px; }
+.cmd-category-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.cmd-list { display: flex; flex-direction: column; gap: 6px; }
+.cmd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.cmd-left { flex: 1; min-width: 0; }
+.cmd-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.cmd-phrases {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cmd-phrase-chip {
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .cmd-highlight { color: var(--green); }
-.cmd-action { font-size: 11px; color: var(--text2); }
+
+/* ── History ───────────────────────────────────────────────────── */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.history-row.history-fail { opacity: 0.7; }
+.history-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.history-icon {
+  font-size: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.history-row:not(.history-fail) .history-icon { color: var(--green); }
+.history-row.history-fail .history-icon { color: #e63946; }
+.history-text {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.history-result {
+  font-size: 11px;
+  color: var(--text3);
+}
+.history-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.history-time {
+  font-size: 10px;
+  color: var(--text3);
+}
+
+/* ── Btn sm ────────────────────────────────────────────────────── */
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* ── Empty state ───────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--text3);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .voice-card { padding: 24px 16px 20px; }
+  .cmd-phrase-chip { display: none; }
+  .cmd-phrase-chip:first-child { display: block; }
+}
