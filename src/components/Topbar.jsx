@@ -1,5 +1,6 @@
 // src/components/Topbar.jsx
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import './Topbar.css';
 
@@ -48,6 +49,7 @@ function useClock() {
 
 export default function Topbar({ onMenuToggle, hideBurger = false }) {
   const { user, logout }             = useAuth();
+  const navigate                     = useNavigate();
   const [showUser, setShowUser]      = useState(false);
   const { h12, m, s, ampm, dateStr } = useClock();
   const dropdownRef                  = useRef(null);
@@ -72,15 +74,20 @@ export default function Topbar({ onMenuToggle, hideBurger = false }) {
         </button>
       )}
 
-      {/* Brand */}
-      <div className="topbar-brand">
+      {/* Brand — home button (YouTube-style) */}
+      <button
+        className="topbar-brand topbar-brand--btn"
+        onClick={() => navigate('/')}
+        aria-label="Go to Dashboard"
+        title="Dashboard"
+      >
         <img
           src="/mars-logo.webp"
           alt="MARS"
           className="topbar-logo-img"
         />
         <span>MARS</span>
-      </div>
+      </button>
 
       {/* Clock — centered */}
       <div className="topbar-center">
