@@ -59,7 +59,6 @@
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 6px;
   font-family: var(--font-head);
   font-size: 1.1rem;
   font-weight: 700;
@@ -69,22 +68,27 @@
 }
 
 .topbar-brand--btn {
-  background: none;
+  background: none !important;
   border: none;
-  padding: 6px 8px;
+  padding: 4px 6px;
   margin: 0;
   cursor: pointer;
   border-radius: 8px;
-  transition: background 0.15s, opacity 0.15s, transform 0.12s;
+  transition: opacity 0.15s, transform 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.topbar-brand--btn:hover { background: rgba(255,255,255,0.07); }
-.topbar-brand--btn:active { opacity: 0.75; transform: scale(0.96); }
+.topbar-brand--btn:hover { opacity: 0.85; }
+.topbar-brand--btn:active { opacity: 0.65; transform: scale(0.96); }
 
 .topbar-logo-img {
   width: 28px;
   height: 28px;
   object-fit: contain;
   flex-shrink: 0;
+  background: none !important;
+  mix-blend-mode: normal;
 }
 
 /* ── Center spacer + clock ────────────────────────────────────── */
