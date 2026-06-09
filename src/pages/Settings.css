@@ -100,3 +100,32 @@
   transition: border-color var(--t-fast);
 }
 .settings-select:focus { border-color: var(--green); }
+
+/* ── Clock format toggle ──────────────────────────────────────── */
+.clock-format-toggle {
+  display: flex;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.clock-fmt-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+  letter-spacing: 0.03em;
+}
+.clock-fmt-btn.active {
+  background: var(--green);
+  color: #fff;
+}
+.clock-fmt-btn:not(.active):hover {
+  background: var(--bg2);
+  color: var(--text);
+}

@@ -6,21 +6,43 @@ import './Topbar.css';
 // ── Live digital clock ────────────────────────────────────────────
 function useClock() {
   const [time, setTime] = useState(new Date());
+  const [use24hr, setUse24hr] = useState(
+    () => localStorage.getItem('mars-clock-24hr') === 'true'
+  );
+
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Listen for the custom event fired by Settings when the user toggles format
+  useEffect(() => {
+    const handler = () => {
+      setUse24hr(localStorage.getItem('mars-clock-24hr') === 'true');
+    };
+    window.addEventListener('mars:clock-format-changed', handler);
+    return () => window.removeEventListener('mars:clock-format-changed', handler);
+  }, []);
+
   const h    = time.getHours();
   const m    = time.getMinutes().toString().padStart(2, '0');
   const s    = time.getSeconds().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12  = (h % 12 || 12).toString().padStart(2, '0');
 
   const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const dateStr = `${days[time.getDay()]} ${months[time.getMonth()]} ${time.getDate()}`;
 
+  if (use24hr) {
+    return {
+      h12: h.toString().padStart(2, '0'),
+      m, s,
+      ampm: null,
+      dateStr,
+    };
+  }
+
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12  = (h % 12 || 12).toString().padStart(2, '0');
   return { h12, m, s, ampm, dateStr };
 }
 
@@ -64,7 +86,7 @@ export default function Topbar({ onMenuToggle, hideBurger = false }) {
         <div className="topbar-clock">
           <span className="clock-time">
             {h12}:{m}<span className="clock-seconds">:{s}</span>
-            <span className="clock-ampm">{ampm}</span>
+            {ampm && <span className="clock-ampm">{ampm}</span>}
           </span>
           <span className="clock-date">{dateStr}</span>
         </div>

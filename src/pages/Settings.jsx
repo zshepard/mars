@@ -15,6 +15,20 @@ export default function Settings() {
   const [defaultDevice, setDefaultDevice]                  = useState('phone');
   // eslint-disable-next-line no-unused-vars
   const [theme, setTheme]                                  = useState('dark');
+
+  // 12/24hr clock format — persisted to localStorage
+  const [use24hr, setUse24hr] = useState(
+    () => localStorage.getItem('mars-clock-24hr') === 'true'
+  );
+
+  const toggleClockFormat = () => {
+    const next = !use24hr;
+    setUse24hr(next);
+    localStorage.setItem('mars-clock-24hr', String(next));
+    // Notify Topbar clock to re-read the setting immediately
+    window.dispatchEvent(new CustomEvent('mars:clock-format-changed'));
+  };
+
   const currentPack = getPackById(localStorage.getItem('mars-background-pack') || 'default-dark');
 
   return (
@@ -89,9 +103,29 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Background Packs */}
+      {/* Appearance */}
       <div className="settings-section">
         <div className="settings-section-title">Appearance</div>
+
+        {/* Clock format toggle */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val">Clock format</div>
+            <div className="settings-sub">{use24hr ? '24-hour (18:45)' : '12-hour (06:45 PM)'}</div>
+          </div>
+          <div className="clock-format-toggle">
+            <button
+              className={`clock-fmt-btn ${!use24hr ? 'active' : ''}`}
+              onClick={() => { if (use24hr) toggleClockFormat(); }}
+            >12h</button>
+            <button
+              className={`clock-fmt-btn ${use24hr ? 'active' : ''}`}
+              onClick={() => { if (!use24hr) toggleClockFormat(); }}
+            >24h</button>
+          </div>
+        </div>
+
+        {/* Background pack */}
         <div className="settings-row settings-row--clickable" onClick={() => navigate('/backgrounds')}>
           <div>
             <div className="settings-val">Background Pack</div>
@@ -128,7 +162,7 @@ export default function Settings() {
         </div>
         <div className="settings-row">
           <div className="settings-val">App version</div>
-          <span className="settings-sub">v1.0.0</span>
+          <span className="settings-sub">v1.3.3</span>
         </div>
       </div>
     </div>
