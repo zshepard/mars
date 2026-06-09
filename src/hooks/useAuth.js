@@ -249,29 +249,39 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const wasGuest = localStorage.getItem(GUEST_KEY) === 'true';
-    if (wasGuest) {
-      setGuest(true);
-      setUser({ uid: GUEST_ID, displayName: 'Guest', isGuest: true });
-      setLoading(false);
-    }
+    // NOTE: Do NOT commit to guest mode here — wait for onAuthStateChanged first.
+    // If Firebase returns a real user, it overrides the guest flag.
+    // Only fall back to guest if Firebase returns null (truly signed out).
 
     // Safety timeout — never hang on the loading screen longer than 5 seconds
     const safetyTimer = setTimeout(() => {
-      console.warn('[MARS Auth] Safety timeout — forcing loading=false');
+      console.warn('[MARS Auth] Safety timeout — forcing guest mode');
+      if (wasGuest) {
+        setGuest(true);
+        setUser({ uid: GUEST_ID, displayName: 'Guest', isGuest: true });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     }, 5000);
 
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (firebaseUser) {
+        // Real Firebase user — always override guest mode
         localStorage.removeItem(GUEST_KEY);
         setGuest(false);
-        // Expose user immediately — don't block on Firestore
         setUser({ ...firebaseUser, isGuest: false });
-        // Save/update user record in Firestore in the background
         syncUserProfile(firebaseUser);
       } else {
-        if (!wasGuest) setUser(null);
+        // Firebase returned null — no active session
+        if (wasGuest) {
+          // Restore guest mode only if user explicitly chose it
+          setGuest(true);
+          setUser({ uid: GUEST_ID, displayName: 'Guest', isGuest: true });
+        } else {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
