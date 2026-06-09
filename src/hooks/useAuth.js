@@ -40,6 +40,11 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  updatePassword,
+  sendPasswordResetEmail,
+  EmailAuthProvider,
+  linkWithCredential,
+  reauthenticateWithCredential,
   GoogleAuthProvider,
   signInWithCredential,
 } from 'firebase/auth';
@@ -392,6 +397,51 @@ export function AuthProvider({ children }) {
   };
 
   // -------------------------------------------------------------------------
+  // Profile management
+  // -------------------------------------------------------------------------
+
+  // Update display name in Firebase Auth + Firestore
+  const updateUsername = async (newDisplayName) => {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    await updateProfile(auth.currentUser, { displayName: newDisplayName });
+    // Sync to Firestore
+    const ref = doc(db, 'users', auth.currentUser.uid);
+    await updateDoc(ref, { displayName: newDisplayName });
+    // Update local state so UI reflects immediately
+    setUser((prev) => prev ? { ...prev, displayName: newDisplayName } : prev);
+  };
+
+  // Set a password on a Google-only account (links email+password provider)
+  // OR update the existing password (requires recent sign-in)
+  const setOrUpdatePassword = async (newPassword, currentPassword = null) => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) throw new Error('Not signed in');
+
+    const hasPasswordProvider = firebaseUser.providerData.some(
+      (p) => p.providerId === 'password'
+    );
+
+    if (hasPasswordProvider) {
+      // Already has a password — re-authenticate first, then update
+      if (!currentPassword) throw new Error('current_password_required');
+      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+    } else {
+      // Google-only account — link email+password provider
+      const credential = EmailAuthProvider.credential(firebaseUser.email, newPassword);
+      await linkWithCredential(firebaseUser, credential);
+    }
+  };
+
+  // Send a password reset email (works for both email+password and Google accounts)
+  const sendPasswordReset = async (email) => {
+    const targetEmail = email || auth.currentUser?.email;
+    if (!targetEmail) throw new Error('No email address available');
+    await sendPasswordResetEmail(auth, targetEmail);
+  };
+
+  // -------------------------------------------------------------------------
   // Sign out
   // -------------------------------------------------------------------------
   const logout = async () => {
@@ -416,6 +466,9 @@ export function AuthProvider({ children }) {
         logout,
         sendMagicLink,
         completeMagicLinkSignIn,
+        updateUsername,
+        setOrUpdatePassword,
+        sendPasswordReset,
       }}
     >
       {children}

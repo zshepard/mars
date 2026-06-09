@@ -7,7 +7,7 @@ import { getPackById } from '../data/backgroundPacks';
 import './Settings.css';
 
 export default function Settings() {
-  const { user, logout }                                    = useAuth();
+  const { user, logout, updateUsername, setOrUpdatePassword, sendPasswordReset } = useAuth();
   const {
     notifPermission, requestNotifications,
     micPermission,   requestMicrophone,
@@ -56,6 +56,70 @@ export default function Settings() {
 
   const currentPack = getPackById(localStorage.getItem('mars-background-pack') || 'default-dark');
 
+  // ── Account editing state ──────────────────────────────────────────────────
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput]     = useState('');
+  const [usernameStatus, setUsernameStatus]   = useState(null); // null | 'saving' | 'saved' | 'error'
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPw, setCurrentPw]               = useState('');
+  const [newPw, setNewPw]                       = useState('');
+  const [confirmPw, setConfirmPw]               = useState('');
+  const [pwStatus, setPwStatus]                 = useState(null); // null | 'saving' | 'saved' | 'error' | string
+  const [resetStatus, setResetStatus]           = useState(null);
+
+  // Does the current user have a password linked?
+  const hasPassword = user?.providerData?.some?.((p) => p.providerId === 'password') ?? false;
+
+  const handleSaveUsername = async () => {
+    const trimmed = usernameInput.trim();
+    if (!trimmed) return;
+    setUsernameStatus('saving');
+    try {
+      await updateUsername(trimmed);
+      setUsernameStatus('saved');
+      setEditingUsername(false);
+      setTimeout(() => setUsernameStatus(null), 2500);
+    } catch (e) {
+      setUsernameStatus('error');
+      console.error(e);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    if (newPw.length < 6) { setPwStatus('Password must be at least 6 characters'); return; }
+    if (newPw !== confirmPw) { setPwStatus('Passwords do not match'); return; }
+    setPwStatus('saving');
+    try {
+      await setOrUpdatePassword(newPw, hasPassword ? currentPw : null);
+      setPwStatus('saved');
+      setCurrentPw(''); setNewPw(''); setConfirmPw('');
+      setShowPasswordForm(false);
+      setTimeout(() => setPwStatus(null), 2500);
+    } catch (e) {
+      if (e.message === 'current_password_required') {
+        setPwStatus('Please enter your current password');
+      } else if (e.code === 'auth/wrong-password') {
+        setPwStatus('Current password is incorrect');
+      } else if (e.code === 'auth/requires-recent-login') {
+        setPwStatus('Session expired — please sign out and sign in again');
+      } else {
+        setPwStatus(e.message || 'An error occurred');
+      }
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setResetStatus('sending');
+    try {
+      await sendPasswordReset();
+      setResetStatus('sent');
+      setTimeout(() => setResetStatus(null), 4000);
+    } catch (e) {
+      setResetStatus('error');
+    }
+  };
+
   return (
     <div className="settings-page page-enter">
       <h1 className="page-title">Settings</h1>
@@ -63,16 +127,126 @@ export default function Settings() {
       {/* Account */}
       <div className="settings-section">
         <div className="settings-section-title">Account</div>
+
+        {/* Profile row */}
         <div className="settings-row">
           <div className="settings-row-left">
             {user?.photoURL && <img src={user.photoURL} alt="" className="settings-avatar" />}
             <div>
-              <div className="settings-val">{user?.displayName}</div>
+              <div className="settings-val">{user?.displayName || 'No name set'}</div>
               <div className="settings-sub">{user?.email}</div>
             </div>
           </div>
           <button className="btn" onClick={logout}>Sign out</button>
         </div>
+
+        {/* Edit username */}
+        <div className="settings-row" style={{flexDirection:'column',alignItems:'stretch',gap:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div className="settings-val"><i className="ti ti-user" style={{marginRight:6}} />Username</div>
+              <div className="settings-sub">Change your display name</div>
+            </div>
+            {!editingUsername && (
+              <button className="btn btn-sm" onClick={() => { setUsernameInput(user?.displayName || ''); setEditingUsername(true); setUsernameStatus(null); }}>
+                Edit
+              </button>
+            )}
+          </div>
+          {editingUsername && (
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <input
+                className="settings-input"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveUsername(); if (e.key === 'Escape') setEditingUsername(false); }}
+                placeholder="Display name"
+                maxLength={40}
+                autoFocus
+              />
+              <button className="btn btn-primary btn-sm" onClick={handleSaveUsername} disabled={usernameStatus === 'saving'}>
+                {usernameStatus === 'saving' ? 'Saving…' : 'Save'}
+              </button>
+              <button className="btn btn-sm" onClick={() => setEditingUsername(false)}>Cancel</button>
+            </div>
+          )}
+          {usernameStatus === 'saved' && <span className="badge badge-green"><i className="ti ti-check" /> Saved</span>}
+          {usernameStatus === 'error'  && <span className="badge badge-red">Failed to save — try again</span>}
+        </div>
+
+        {/* Set / change password */}
+        <div className="settings-row" style={{flexDirection:'column',alignItems:'stretch',gap:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div className="settings-val"><i className="ti ti-lock" style={{marginRight:6}} />{hasPassword ? 'Change Password' : 'Set Password'}</div>
+              <div className="settings-sub">
+                {hasPassword
+                  ? 'Update your account password'
+                  : 'Add a password to your Google account so you can also sign in with email'}
+              </div>
+            </div>
+            {!showPasswordForm && (
+              <button className="btn btn-sm" onClick={() => { setShowPasswordForm(true); setPwStatus(null); }}>
+                {hasPassword ? 'Change' : 'Set'}
+              </button>
+            )}
+          </div>
+          {showPasswordForm && (
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {hasPassword && (
+                <input
+                  className="settings-input"
+                  type="password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  placeholder="Current password"
+                />
+              )}
+              <input
+                className="settings-input"
+                type="password"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="New password (min 6 characters)"
+              />
+              <input
+                className="settings-input"
+                type="password"
+                value={confirmPw}
+                onChange={(e) => setConfirmPw(e.target.value)}
+                placeholder="Confirm new password"
+              />
+              {pwStatus && pwStatus !== 'saving' && pwStatus !== 'saved' && (
+                <span className="badge badge-red">{pwStatus}</span>
+              )}
+              {pwStatus === 'saved' && <span className="badge badge-green"><i className="ti ti-check" /> Password updated</span>}
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn btn-primary btn-sm" onClick={handleSavePassword} disabled={pwStatus === 'saving'}>
+                  {pwStatus === 'saving' ? 'Saving…' : 'Save Password'}
+                </button>
+                <button className="btn btn-sm" onClick={() => { setShowPasswordForm(false); setCurrentPw(''); setNewPw(''); setConfirmPw(''); setPwStatus(null); }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Forgot / reset password */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-mail" style={{marginRight:6}} />Reset Password by Email</div>
+            <div className="settings-sub">Send a password reset link to {user?.email}</div>
+          </div>
+          <button
+            className="btn btn-sm"
+            onClick={handlePasswordReset}
+            disabled={resetStatus === 'sending'}
+          >
+            {resetStatus === 'sending' ? 'Sending…' : 'Send Link'}
+          </button>
+        </div>
+        {resetStatus === 'sent'  && <div className="settings-banner banner-green"><i className="ti ti-check" /> Reset link sent to {user?.email}</div>}
+        {resetStatus === 'error' && <div className="settings-banner banner-red">Failed to send — try again</div>}
+
       </div>
 
       {/* Permissions */}
