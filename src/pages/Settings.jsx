@@ -8,7 +8,13 @@ import './Settings.css';
 
 export default function Settings() {
   const { user, logout }                                    = useAuth();
-  const { notifPermission, requestNotifications, isOnline } = useMars();
+  const {
+    notifPermission, requestNotifications,
+    micPermission,   requestMicrophone,
+    wakeLockSupported, wakeLockActive, requestWakeLock,
+    storagePermission, requestPersistentStorage,
+    isOnline,
+  } = useMars();
   const navigate                                            = useNavigate();
   const [voiceEnabled, setVoiceEnabled]                    = useState(true);
   const [voiceWakeWord, setVoiceWakeWord]                  = useState('Hey Mars');
@@ -50,17 +56,67 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* Permissions */}
       <div className="settings-section">
-        <div className="settings-section-title">Notifications & Alarms</div>
+        <div className="settings-section-title">App Permissions</div>
+
+        {/* Notifications */}
         <div className="settings-row">
           <div>
-            <div className="settings-val">Push notifications</div>
-            <div className="settings-sub">Required for alarm delivery when app is closed</div>
+            <div className="settings-val"><i className="ti ti-bell" style={{marginRight:6}} />Push Notifications</div>
+            <div className="settings-sub">Required for alarm delivery when the app is closed</div>
           </div>
           {notifPermission === 'granted'
-            ? <span className="badge badge-green">Enabled</span>
-            : <button className="btn btn-primary" onClick={requestNotifications}>Enable</button>
+            ? <span className="badge badge-green"><i className="ti ti-check" /> Granted</span>
+            : notifPermission === 'denied'
+            ? <span className="badge badge-red"><i className="ti ti-ban" /> Blocked</span>
+            : <button className="btn btn-primary btn-sm" onClick={requestNotifications}>Allow</button>
+          }
+        </div>
+
+        {/* Microphone */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-microphone" style={{marginRight:6}} />Microphone</div>
+            <div className="settings-sub">Required for voice commands and "Hey Mars" wake word</div>
+          </div>
+          {micPermission === 'granted'
+            ? <span className="badge badge-green"><i className="ti ti-check" /> Granted</span>
+            : micPermission === 'denied'
+            ? <span className="badge badge-red"><i className="ti ti-ban" /> Blocked</span>
+            : micPermission === 'unsupported'
+            ? <span className="badge">N/A</span>
+            : <button className="btn btn-primary btn-sm" onClick={requestMicrophone}>Allow</button>
+          }
+        </div>
+
+        {/* Wake Lock */}
+        {wakeLockSupported && (
+          <div className="settings-row">
+            <div>
+              <div className="settings-val"><i className="ti ti-sun" style={{marginRight:6}} />Keep Screen On</div>
+              <div className="settings-sub">Prevents screen sleep while an alarm is firing</div>
+            </div>
+            {wakeLockActive
+              ? <span className="badge badge-green"><i className="ti ti-check" /> Active</span>
+              : <button className="btn btn-sm" onClick={requestWakeLock}>Enable</button>
+            }
+          </div>
+        )}
+
+        {/* Persistent Storage */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-database" style={{marginRight:6}} />Persistent Storage</div>
+            <div className="settings-sub">Prevents the browser from clearing alarm data when storage is low</div>
+          </div>
+          {storagePermission === 'granted'
+            ? <span className="badge badge-green"><i className="ti ti-check" /> Granted</span>
+            : storagePermission === 'denied'
+            ? <span className="badge badge-red"><i className="ti ti-ban" /> Denied</span>
+            : storagePermission === 'unsupported'
+            ? <span className="badge">N/A</span>
+            : <button className="btn btn-primary btn-sm" onClick={requestPersistentStorage}>Allow</button>
           }
         </div>
       </div>
