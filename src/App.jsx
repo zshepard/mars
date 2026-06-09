@@ -10,10 +10,7 @@ import FAB                                             from './components/FAB';
 import Login                                           from './pages/Login';
 import Dashboard                                       from './pages/Dashboard';
 import Alarms                                          from './pages/Alarms';
-import HomeControl                                     from './pages/HomeControl';
-import Health                                          from './pages/Health';
 import Voice                                           from './pages/Voice';
-import AI                                              from './pages/AI';
 import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
 import BackgroundPacks                                 from './pages/BackgroundPacks';
@@ -86,10 +83,10 @@ function AppShell() {
             <Route path="/alarms"    element={<Alarms />}      />
             <Route path="/links"     element={<Navigate to="/alarms" replace />} />
             <Route path="/routines"  element={<Navigate to="/alarms" replace />} />
-            <Route path="/home"      element={<HomeControl />} />
-            <Route path="/health"    element={<Health />}      />
+            <Route path="/home"      element={<Navigate to="/settings" replace />} />
+            <Route path="/health"    element={<Navigate to="/settings" replace />} />
             <Route path="/voice"     element={<Voice />}       />
-            <Route path="/ai"        element={<AI />}          />
+            <Route path="/ai"        element={<Navigate to="/settings" replace />} />
             <Route path="/platforms" element={<Platforms />}   />
             <Route path="/settings"    element={<Settings />}        />
             <Route path="/backgrounds" element={<BackgroundPacks />}  />

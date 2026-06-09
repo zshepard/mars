@@ -147,6 +147,41 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Features Coming Soon */}
+      <div className="settings-section">
+        <div className="settings-section-title">Features Coming Soon</div>
+        <div className="settings-row settings-coming-soon-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-home" /></div>
+            <div>
+              <div className="settings-val">Home Control</div>
+              <div className="settings-sub">Smart home device integration & room management</div>
+            </div>
+          </div>
+          <span className="badge badge-amber">Soon</span>
+        </div>
+        <div className="settings-row settings-coming-soon-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-heart-rate" /></div>
+            <div>
+              <div className="settings-val">Health Tracking</div>
+              <div className="settings-sub">Sleep, activity, and wellness monitoring</div>
+            </div>
+          </div>
+          <span className="badge badge-amber">Soon</span>
+        </div>
+        <div className="settings-row settings-coming-soon-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-sparkles" /></div>
+            <div>
+              <div className="settings-val">AI Assistant</div>
+              <div className="settings-sub">On-device AI for routines, suggestions & automation</div>
+            </div>
+          </div>
+          <span className="badge badge-amber">Soon</span>
+        </div>
+      </div>
+
       {/* System status */}
       <div className="settings-section">
         <div className="settings-section-title">System</div>
