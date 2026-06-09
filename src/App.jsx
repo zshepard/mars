@@ -70,7 +70,7 @@ function AppShell() {
         hideBurger={isMobile}
       />
 
-      <div className="app-body">
+      <div className="app-body" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
         {/* Sidebar — hidden on mobile via CSS, BottomNav takes over */}
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

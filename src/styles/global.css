@@ -88,6 +88,17 @@ input, textarea, select { font-family: var(--font); }
   margin: 0 auto;
   width: 100%;
 }
+
+/* On desktop with sidebar open, shift content left by half the sidebar width
+   so it visually centers in the full viewport, not just app-main */
+@media (min-width: 701px) {
+  [data-sidebar='open'] .page-wrap,
+  [data-sidebar='open'] .dash-page,
+  [data-sidebar='open'] .settings-page {
+    margin-left: calc(50% - 110px - (min(900px, 100%) / 2));
+    margin-right: auto;
+  }
+}
 .page-header {
   display: flex;
   align-items: center;
