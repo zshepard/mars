@@ -483,20 +483,30 @@ export default function Alarms() {
   const handleAddRoutine = async () => {
     if (!routineForm.name) return;
     setRoutineSaving(true);
-    await addRoutine(routineForm);
-    setRoutineForm(EMPTY_ROUTINE);
-    setShowRoutineForm(false);
-    setRoutineSaving(false);
+    try {
+      await addRoutine(routineForm);
+      setRoutineForm(EMPTY_ROUTINE);
+      setShowRoutineForm(false);
+    } catch (err) {
+      console.error('[handleAddRoutine] error:', err);
+    } finally {
+      setRoutineSaving(false);
+    }
   };
 
   // ── Alarm handlers ────────────────────────────────────────────────
   const handleAddAlarm = async () => {
     if (!alarmForm.time) return;
     setAlarmSaving(true);
-    await addAlarm(alarmForm);
-    setAlarmForm(EMPTY_ALARM);
-    setShowAlarmForm(false);
-    setAlarmSaving(false);
+    try {
+      await addAlarm(alarmForm);
+      setAlarmForm(EMPTY_ALARM);
+      setShowAlarmForm(false);
+    } catch (err) {
+      console.error('[handleAddAlarm] error:', err);
+    } finally {
+      setAlarmSaving(false);
+    }
   };
 
   const startEditAlarm = alarm => {
@@ -513,18 +523,29 @@ export default function Alarms() {
   const handleSaveAlarmEdit = async () => {
     if (!editAlarmForm.time) return;
     setEditAlarmSaving(true);
-    await updateAlarm(editAlarmId, editAlarmForm);
-    setEditAlarmId(null); setEditAlarmForm(null); setEditAlarmSaving(false);
+    try {
+      await updateAlarm(editAlarmId, editAlarmForm);
+      setEditAlarmId(null); setEditAlarmForm(null);
+    } catch (err) {
+      console.error('[handleSaveAlarmEdit] error:', err);
+    } finally {
+      setEditAlarmSaving(false);
+    }
   };
 
   // ── Link handlers ─────────────────────────────────────────────────
   const handleAddLink = async () => {
     if (!linkForm.url || !linkForm.time) return;
     setLinkSaving(true);
-    await addLink(linkForm);
-    setLinkForm(EMPTY_LINK);
-    setShowLinkForm(false);
-    setLinkSaving(false);
+    try {
+      await addLink(linkForm);
+      setLinkForm(EMPTY_LINK);
+      setShowLinkForm(false);
+    } catch (err) {
+      console.error('[handleAddLink] error:', err);
+    } finally {
+      setLinkSaving(false);
+    }
   };
 
   const startEditLink = link => {
@@ -539,8 +560,14 @@ export default function Alarms() {
   const handleSaveLinkEdit = async () => {
     if (!editLinkForm.url || !editLinkForm.time) return;
     setEditLinkSaving(true);
-    await updateLink(editLinkId, editLinkForm);
-    setEditLinkId(null); setEditLinkForm(null); setEditLinkSaving(false);
+    try {
+      await updateLink(editLinkId, editLinkForm);
+      setEditLinkId(null); setEditLinkForm(null);
+    } catch (err) {
+      console.error('[handleSaveLinkEdit] error:', err);
+    } finally {
+      setEditLinkSaving(false);
+    }
   };
 
   return (
