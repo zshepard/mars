@@ -6,7 +6,6 @@ const NAV = [
   { to: '/',          icon: 'ti-dashboard',     label: 'Dashboard'      },
   { to: '/alarms',    icon: 'ti-alarm',          label: 'Alarms & Links' },
   { to: '/voice',     icon: 'ti-microphone-2',   label: 'Voice'          },
-  { to: '/platforms', icon: 'ti-devices',        label: 'Platforms'      },
   { to: '/settings',  icon: 'ti-settings',       label: 'Settings'       },
 ];
 

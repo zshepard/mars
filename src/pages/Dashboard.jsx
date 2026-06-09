@@ -125,27 +125,6 @@ export default function Dashboard() {
           )}
         </Link>
 
-        {/* System status */}
-        <Link to="/platforms" className="dash-card">
-          <div className="dc-header">
-            <i className="ti ti-devices" />
-            <span>Platforms</span>
-          </div>
-          <div className="status-list">
-            <div className="status-row">
-              <span><i className="ti ti-world" /> Web</span>
-              <span className="badge badge-green">Live</span>
-            </div>
-            <div className="status-row">
-              <span><i className="ti ti-device-mobile" /> Mobile PWA</span>
-              <span className="badge badge-green">Ready</span>
-            </div>
-            <div className="status-row">
-              <span><i className="ti ti-brand-google-play" /> Play Store</span>
-              <span className="badge badge-amber">Pending</span>
-            </div>
-          </div>
-        </Link>
 
         {/* All alarms summary */}
         <Link to="/alarms" className="dash-card">
@@ -177,7 +156,6 @@ export default function Dashboard() {
             <Link to="/routines"  className="qa-btn"><i className="ti ti-route" />      New Routine</Link>
             <Link to="/alarms"    className="qa-btn"><i className="ti ti-link" />       Add Link</Link>
             <Link to="/voice"     className="qa-btn"><i className="ti ti-microphone" /> Voice</Link>
-            <Link to="/platforms" className="qa-btn"><i className="ti ti-devices" />    Platforms</Link>
             <Link to="/settings"  className="qa-btn"><i className="ti ti-settings" />   Settings</Link>
           </div>
         </div>

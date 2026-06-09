@@ -280,6 +280,41 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Platforms */}
+      <div className="settings-section">
+        <div className="settings-section-title">Platforms</div>
+        <div className="settings-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-world" /></div>
+            <div>
+              <div className="settings-val">Web</div>
+              <div className="settings-sub">mars-lyart-alpha.vercel.app</div>
+            </div>
+          </div>
+          <span className="badge badge-green">Live</span>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-device-mobile" /></div>
+            <div>
+              <div className="settings-val">Mobile PWA</div>
+              <div className="settings-sub">Install from browser — works offline</div>
+            </div>
+          </div>
+          <span className="badge badge-green">Ready</span>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-brand-google-play" /></div>
+            <div>
+              <div className="settings-val">Play Store</div>
+              <div className="settings-sub">Android app — pending review</div>
+            </div>
+          </div>
+          <span className="badge badge-amber">Pending</span>
+        </div>
+      </div>
+
       {/* System status */}
       <div className="settings-section">
         <div className="settings-section-title">System</div>

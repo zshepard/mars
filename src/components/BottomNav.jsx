@@ -8,11 +8,11 @@ const PRIMARY_TABS = [
   { to: '/',          icon: 'ti-dashboard',   label: 'Dashboard' },
   { to: '/alarms',    icon: 'ti-alarm',        label: 'Alarms'    },
   { to: '/voice',     icon: 'ti-microphone-2', label: 'Voice'     },
-  { to: '/platforms', icon: 'ti-devices',      label: 'Platforms' },
+  { to: '/settings',  icon: 'ti-settings',     label: 'Settings'  },
 ];
 
 const MORE_ITEMS = [
-  { to: '/settings',  icon: 'ti-settings',      label: 'Settings'  },
+  { to: '/platforms', icon: 'ti-devices',      label: 'Platforms' },
 ];
 
 export default function BottomNav() {
@@ -61,15 +61,6 @@ export default function BottomNav() {
             <span>{label}</span>
           </NavLink>
         ))}
-
-        {/* More button */}
-        <button
-          className={`bottom-tab ${moreOpen ? 'active' : ''}`}
-          onClick={() => setMoreOpen(v => !v)}
-        >
-          <i className="ti ti-dots" />
-          <span>More</span>
-        </button>
       </nav>
     </>
   );
