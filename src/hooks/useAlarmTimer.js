@@ -8,8 +8,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+const WAV_IDS = new Set([
+  'alarm-default','alarm-gentle','alarm-military','chime',
+  'Argon','Carbon','Helium','Krypton','Neon','Osmium','Oxygen','Platinum',
+]);
+
 function soundExt(soundId) {
-  return ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
+  return WAV_IDS.has(soundId) ? 'wav' : 'mp3';
 }
 
 // Returns true if the alarm should fire right now

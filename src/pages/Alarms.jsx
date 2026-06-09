@@ -30,6 +30,10 @@ function getNativeRingtones() {
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 const DAYS    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+// WAV sounds served directly by filename (no prefix needed)
+const WAV_SOUNDS = ['alarm-default','alarm-gentle','alarm-military','chime',
+  'Argon','Carbon','Helium','Krypton','Neon','Osmium','Oxygen','Platinum'];
+
 const SOUNDS  = [
   { id: 'alarm-default',      label: 'Default',      emoji: '🔔' },
   { id: 'alarm-gentle',       label: 'Gentle',       emoji: '🌅' },
@@ -43,6 +47,15 @@ const SOUNDS  = [
   { id: 'alarm-cosmic',       label: 'Cosmic',       emoji: '🚀' },
   { id: 'alarm-marimba',      label: 'Marimba',      emoji: '🪘' },
   { id: 'alarm-pulse',        label: 'Pulse',        emoji: '⚡' },
+  // Android element alarm tones
+  { id: 'Argon',   label: 'Argon',    emoji: '⚗️' },
+  { id: 'Carbon',  label: 'Carbon',   emoji: '💎' },
+  { id: 'Helium',  label: 'Helium',   emoji: '🎈' },
+  { id: 'Krypton', label: 'Krypton',  emoji: '🌌' },
+  { id: 'Neon',    label: 'Neon',     emoji: '🔴' },
+  { id: 'Osmium',  label: 'Osmium',   emoji: '🔩' },
+  { id: 'Oxygen',  label: 'Oxygen',   emoji: '💨' },
+  { id: 'Platinum',label: 'Platinum', emoji: '🪙' },
 ];
 const DEVICES = ['phone','computer','all'];
 
@@ -62,7 +75,7 @@ const EMPTY_LINK = {
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 function previewSound(soundId) {
-  const ext = ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
+  const ext = WAV_SOUNDS.includes(soundId) ? 'wav' : 'mp3';
   const audio = new Audio(`/sounds/${soundId}.${ext}`);
   audio.volume = 0.7;
   audio.play().catch(() => {});
