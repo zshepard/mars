@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.1.0';
+const MARS_VERSION  = 'mars-v1.2.0'; // bumped to bust all v1.1.x caches
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -137,9 +137,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ── Strategy 3: MARS internal routes → Cache First + fallback ─
+  // ── Strategy 3: MARS internal routes ────────────────────────────
+  // HTML navigation requests → Network First so the browser always gets
+  // the latest index.html from Vercel. staleWhileRevalidate was causing
+  // different cached versions to cycle on each reload.
   if (url.origin === self.location.origin) {
-    event.respondWith(staleWhileRevalidate(request));
+    const isHtml = request.headers.get('Accept')?.includes('text/html')
+      || url.pathname === '/' || !url.pathname.includes('.');
+    if (isHtml) {
+      event.respondWith(networkFirst(request));
+    } else {
+      event.respondWith(staleWhileRevalidate(request));
+    }
     return;
   }
 
