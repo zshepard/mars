@@ -4,6 +4,16 @@ import { useAuth } from '../hooks/useAuth';
 import { useHome } from '../hooks/useHome';
 import './HomeControl.css';
 
+// Opens a URL safely in both browser and Android WebView contexts.
+function openExternalUrl(url) {
+  if (!url) return;
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url }));
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 /* ─── Room icon picker options ─────────────────────────────────────────── */
 const ROOM_ICONS = [
   { icon: 'ti-bed',             label: 'Bedroom'   },
@@ -120,7 +130,7 @@ function RoomLinkRow({ link, onUpdate, onDelete }) {
       <button
         className="room-link-open"
         title="Open link"
-        onClick={() => link.url && window.open(link.url, '_blank', 'noopener')}
+        onClick={() => link.url && openExternalUrl(link.url)}
         disabled={!link.url}
       >
         <i className="ti ti-external-link" />

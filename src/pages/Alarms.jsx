@@ -13,6 +13,17 @@ import './Alarms.css';
 // Returns true when running inside the MARS Android WebView
 const isNativeApp = () => !!(window.ReactNativeWebView || window.__marsNativeBridgeReady);
 
+// Opens a URL safely in both browser and Android WebView contexts.
+// window.open() is silently blocked inside WebViews — use the native bridge instead.
+function openExternalUrl(url) {
+  if (!url) return;
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url }));
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 // Request the native ringtone list; resolves with an array of {id, label, uri}
 function getNativeRingtones() {
   return new Promise((resolve) => {
@@ -316,7 +327,7 @@ function useLinkTimer(links) {
 
         firedRef.current.add(fireKey);
         // Open the URL
-        window.open(link.url, '_blank', 'noopener');
+        openExternalUrl(link.url);
       });
 
       // Update countdowns

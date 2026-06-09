@@ -6,6 +6,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+// Opens a URL safely in both browser and Android WebView contexts.
+// window.open() is silently blocked inside WebViews — use the native bridge instead.
+function openExternalUrl(url) {
+  if (!url) return;
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url }));
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const WAV_IDS = new Set([
@@ -99,7 +110,7 @@ export function useAlarmTimer(alarms = []) {
     stopAudio();
     setFiringAlarm(null);
     if (alarm?.openUrl) {
-      window.open(alarm.openUrl, '_blank', 'noopener');
+      openExternalUrl(alarm.openUrl);
     }
   }, [clearAutoDismiss, stopAudio]);
 
@@ -146,7 +157,7 @@ export function useAlarmTimer(alarms = []) {
             }
             // Open URL if set
             if (alarmSnapshot.openUrl) {
-              window.open(alarmSnapshot.openUrl, '_blank', 'noopener');
+              openExternalUrl(alarmSnapshot.openUrl);
             }
             return null; // clear the firing alarm
           }
