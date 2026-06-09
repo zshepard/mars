@@ -32,9 +32,8 @@ function msUntilNextFire(alarm) {
   if (isNaN(h) || isNaN(m)) return null;
 
   const days = alarm.days || [];
-  const todayIdx = now.getDay(); // 0=Sun
+  const todayIdx = now.getDay();
 
-  // Find the next matching day (today counts if alarm hasn't fired yet today)
   for (let offset = 0; offset < 8; offset++) {
     const dayIdx = (todayIdx + offset) % 7;
     const dayName = DAY_NAMES[dayIdx];
@@ -67,36 +66,53 @@ export function useAlarmTimer(alarms = []) {
   const [firingAlarm, setFiringAlarm] = useState(null);
   // countdowns: { [alarmId]: "Xh Ym" | null }
   const [countdowns, setCountdowns]   = useState({});
-  const audioRef  = useRef(null);
-  const firedRef  = useRef(new Set());
+  const audioRef          = useRef(null);
+  const firedRef          = useRef(new Set());
+  // Stable ref for the auto-dismiss timeout — survives re-renders
+  const autoDismissTimer  = useRef(null);
 
-  // ── Dismiss ────────────────────────────────────────────────────
-  const dismissAlarm = useCallback((alarm) => {
+  // ── Clear the auto-dismiss timer (called on manual dismiss / snooze) ──
+  const clearAutoDismiss = useCallback(() => {
+    if (autoDismissTimer.current !== null) {
+      clearTimeout(autoDismissTimer.current);
+      autoDismissTimer.current = null;
+    }
+  }, []);
+
+  // ── Stop audio helper ─────────────────────────────────────────────
+  const stopAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
+  }, []);
+
+  // ── Dismiss ────────────────────────────────────────────────────────
+  const dismissAlarm = useCallback((alarm) => {
+    clearAutoDismiss();
+    stopAudio();
     setFiringAlarm(null);
     if (alarm?.openUrl) {
       window.open(alarm.openUrl, '_blank', 'noopener');
     }
-  }, []);
+  }, [clearAutoDismiss, stopAudio]);
 
-  // ── Snooze 5 min ───────────────────────────────────────────────
+  // ── Snooze 5 min ───────────────────────────────────────────────────
   const snoozeAlarm = useCallback((alarm) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
+    clearAutoDismiss();
+    stopAudio();
     setFiringAlarm(null);
     setTimeout(() => fireAlarmFn(alarm), 5 * 60 * 1000); // eslint-disable-line no-use-before-define
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clearAutoDismiss, stopAudio]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Fire ───────────────────────────────────────────────────────
+  // ── Fire ───────────────────────────────────────────────────────────
   const fireAlarmFn = useCallback((alarm) => {
+    // Clear any lingering auto-dismiss from a previous fire
+    clearAutoDismiss();
+
     setFiringAlarm(alarm);
+
     const ext = soundExt(alarm.sound || 'alarm-default');
     const audio = new Audio(`/sounds/${alarm.sound || 'alarm-default'}.${ext}`);
     audio.loop = true;
@@ -104,8 +120,31 @@ export function useAlarmTimer(alarms = []) {
     audio.play().catch(() => {});
     audioRef.current = audio;
 
+    // ── Auto-dismiss: schedule a real timeout stored in a stable ref ──
     if (alarm.autoDismiss && alarm.dismissAfter > 0) {
-      setTimeout(() => dismissAlarm(alarm), alarm.dismissAfter * 1000);
+      const delayMs = alarm.dismissAfter * 1000;
+      // Store the alarm snapshot so the timeout always dismisses the right alarm
+      const alarmSnapshot = { ...alarm };
+      autoDismissTimer.current = setTimeout(() => {
+        autoDismissTimer.current = null;
+        // Only dismiss if this alarm is still the one firing
+        setFiringAlarm(current => {
+          if (current && current.id === alarmSnapshot.id) {
+            // Stop audio
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current.currentTime = 0;
+              audioRef.current = null;
+            }
+            // Open URL if set
+            if (alarmSnapshot.openUrl) {
+              window.open(alarmSnapshot.openUrl, '_blank', 'noopener');
+            }
+            return null; // clear the firing alarm
+          }
+          return current; // another alarm fired in the meantime — leave it
+        });
+      }, delayMs);
     }
 
     // Bonus: SW notification if permission is granted
@@ -125,9 +164,9 @@ export function useAlarmTimer(alarms = []) {
         }).catch(() => {});
       });
     }
-  }, [dismissAlarm]);
+  }, [clearAutoDismiss, dismissAlarm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Main interval: every second ────────────────────────────────
+  // ── Main interval: every second ────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -157,6 +196,10 @@ export function useAlarmTimer(alarms = []) {
     return () => clearInterval(interval);
   }, [alarms, fireAlarmFn]);
 
+  // Clean up auto-dismiss timer on unmount
+  useEffect(() => {
+    return () => clearAutoDismiss();
+  }, [clearAutoDismiss]);
+
   return { firingAlarm, dismissAlarm, snoozeAlarm, countdowns };
 }
-// force redeploy Sun Jun  7 15:57:58 UTC 2026
