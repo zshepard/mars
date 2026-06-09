@@ -21,21 +21,123 @@ const SOUNDS = [
   { id: 'alarm-pulse',        label: '⚡ Pulse' },
 ];
 
+const STEP_ICONS = [
+  'ti-alarm','ti-sun','ti-droplet','ti-coffee','ti-run','ti-barbell',
+  'ti-book','ti-brain','ti-heart-rate','ti-moon','ti-bed','ti-pill',
+  'ti-music','ti-microphone','ti-link','ti-device-mobile','ti-laptop',
+  'ti-checklist','ti-clock','ti-star',
+];
+
 const EMPTY_FORM = {
-  name:        '',
-  type:        'morning',
-  days:        ['Mon','Tue','Wed','Thu','Fri'],
-  triggerTime: '',
-  sound:       'alarm-default',
-  openUrl:     '',
-  openDevice:  'phone',
+  name: '', type: 'morning',
+  days: ['Mon','Tue','Wed','Thu','Fri'],
+  triggerTime: '', sound: 'alarm-default',
+  openUrl: '', openDevice: 'phone',
 };
+
+const EMPTY_STEP = { label: '', icon: 'ti-alarm' };
+
+function StepEditor({ steps, onChange }) {
+  const [newStep, setNewStep] = useState(EMPTY_STEP);
+  const [editIdx, setEditIdx] = useState(null);
+  const [editStep, setEditStep] = useState(EMPTY_STEP);
+
+  const addStep = () => {
+    if (!newStep.label.trim()) return;
+    const id = `step-${Date.now()}`;
+    onChange([...steps, { ...newStep, id }]);
+    setNewStep(EMPTY_STEP);
+  };
+
+  const deleteStep = (idx) => onChange(steps.filter((_, i) => i !== idx));
+
+  const startEdit = (idx) => {
+    setEditIdx(idx);
+    setEditStep({ ...steps[idx] });
+  };
+
+  const saveEdit = () => {
+    if (!editStep.label.trim()) return;
+    const updated = steps.map((s, i) => i === editIdx ? { ...s, ...editStep } : s);
+    onChange(updated);
+    setEditIdx(null);
+  };
+
+  const moveStep = (idx, dir) => {
+    const arr = [...steps];
+    const target = idx + dir;
+    if (target < 0 || target >= arr.length) return;
+    [arr[idx], arr[target]] = [arr[target], arr[idx]];
+    onChange(arr);
+  };
+
+  return (
+    <div className="step-editor">
+      <div className="step-editor-title">Flow Steps</div>
+
+      {steps.map((step, i) => (
+        <div key={step.id || i} className="step-edit-row">
+          {editIdx === i ? (
+            <div className="step-edit-form">
+              <select value={editStep.icon} onChange={e => setEditStep(p => ({ ...p, icon: e.target.value }))}>
+                {STEP_ICONS.map(ic => <option key={ic} value={ic}>{ic.replace('ti-', '')}</option>)}
+              </select>
+              <input
+                value={editStep.label}
+                onChange={e => setEditStep(p => ({ ...p, label: e.target.value }))}
+                placeholder="Step label..."
+              />
+              <button className="btn btn-primary btn-sm" onClick={saveEdit}>Save</button>
+              <button className="btn btn-sm" onClick={() => setEditIdx(null)}>Cancel</button>
+            </div>
+          ) : (
+            <>
+              <div className="step-num-sm">{i + 1}</div>
+              <i className={`ti ${step.icon}`} />
+              <span className="step-label-text">{step.label}</span>
+              <div className="step-actions">
+                <button className="icon-btn-sm" onClick={() => moveStep(i, -1)} disabled={i === 0}
+                  title="Move up"><i className="ti ti-arrow-up" /></button>
+                <button className="icon-btn-sm" onClick={() => moveStep(i, 1)} disabled={i === steps.length - 1}
+                  title="Move down"><i className="ti ti-arrow-down" /></button>
+                <button className="icon-btn-sm" onClick={() => startEdit(i)} title="Edit">
+                  <i className="ti ti-pencil" /></button>
+                <button className="icon-btn-sm danger" onClick={() => deleteStep(i)} title="Delete">
+                  <i className="ti ti-trash" /></button>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+
+      {/* Add new step */}
+      <div className="step-add-row">
+        <select value={newStep.icon} onChange={e => setNewStep(p => ({ ...p, icon: e.target.value }))}>
+          {STEP_ICONS.map(ic => <option key={ic} value={ic}>{ic.replace('ti-', '')}</option>)}
+        </select>
+        <input
+          value={newStep.label}
+          onChange={e => setNewStep(p => ({ ...p, label: e.target.value }))}
+          placeholder="New step label..."
+          onKeyDown={e => e.key === 'Enter' && addStep()}
+        />
+        <button className="btn btn-sm" onClick={addStep}>
+          <i className="ti ti-plus" /> Add
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Routines() {
   const { user }     = useAuth();
   const { routines, loading, addRoutine, updateRoutine, deleteRoutine, DEFAULT_STEPS } = useRoutines(user?.uid);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formSteps, setFormSteps] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
+  const [editingStepsId, setEditingStepsId] = useState(null);
+  const [editingSteps, setEditingSteps] = useState([]);
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
@@ -47,16 +149,26 @@ export default function Routines() {
 
   const handleAdd = async () => {
     if (!form.name) return;
-    await addRoutine(form);
+    await addRoutine({ ...form, steps: formSteps.length > 0 ? formSteps : DEFAULT_STEPS });
     setForm(EMPTY_FORM);
+    setFormSteps([]);
     setShowForm(false);
   };
 
   const previewSound = (soundId) => {
-    const ext = soundId === 'chime' || soundId.startsWith('alarm-default') || soundId.startsWith('alarm-gentle') || soundId.startsWith('alarm-military')
-      ? 'wav' : 'mp3';
+    const ext = ['alarm-default','alarm-gentle','alarm-military','chime'].includes(soundId) ? 'wav' : 'mp3';
     const audio = new Audio(`/sounds/${soundId}.${ext}`);
     audio.play().catch(() => {});
+  };
+
+  const startEditSteps = (r) => {
+    setEditingStepsId(r.id);
+    setEditingSteps([...(r.steps || DEFAULT_STEPS)]);
+  };
+
+  const saveSteps = async (id) => {
+    await updateRoutine(id, { steps: editingSteps });
+    setEditingStepsId(null);
   };
 
   return (
@@ -72,7 +184,6 @@ export default function Routines() {
         <div className="card" style={{ marginBottom: 20 }}>
           <h3 className="form-title">New routine</h3>
 
-          {/* Name + Type */}
           <div className="form-grid">
             <div className="form-field">
               <label>Name</label>
@@ -90,7 +201,6 @@ export default function Routines() {
             </div>
           </div>
 
-          {/* Days */}
           <div className="form-field">
             <label>Days</label>
             <div className="day-pills">
@@ -101,10 +211,9 @@ export default function Routines() {
             </div>
           </div>
 
-          {/* Trigger time */}
           <div className="form-grid">
             <div className="form-field">
-              <label>Trigger time <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional — leave blank for manual only)</span></label>
+              <label>Trigger time <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
               <input type="time" value={form.triggerTime}
                 onChange={(e) => set('triggerTime', e.target.value)} />
             </div>
@@ -122,7 +231,6 @@ export default function Routines() {
             </div>
           </div>
 
-          {/* Open URL on trigger */}
           <div className="form-grid">
             <div className="form-field">
               <label>Open URL on trigger <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
@@ -132,15 +240,18 @@ export default function Routines() {
             <div className="form-field">
               <label>Open on device</label>
               <select value={form.openDevice} onChange={(e) => set('openDevice', e.target.value)}>
-                <option value="phone">phone</option>
-                <option value="computer">computer</option>
-                <option value="all">all</option>
+                <option value="phone">Phone</option>
+                <option value="computer">Computer</option>
+                <option value="all">All</option>
               </select>
             </div>
           </div>
 
+          {/* Step editor in create form */}
+          <StepEditor steps={formSteps} onChange={setFormSteps} />
+
           <div className="form-actions">
-            <button className="btn" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}>Cancel</button>
+            <button className="btn" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFormSteps([]); }}>Cancel</button>
             <button className="btn btn-primary" onClick={handleAdd}>Save routine</button>
           </div>
         </div>
@@ -158,8 +269,11 @@ export default function Routines() {
           {routines.map((r) => (
             <div key={r.id} className="card routine-card">
               <div className="routine-header">
-                <div>
-                  <div className="routine-name">{r.name}</div>
+                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}>
+                  <div className="routine-name">
+                    <i className={`ti ti-chevron-${expandedId === r.id ? 'down' : 'right'} routine-chevron`} />
+                    {r.name}
+                  </div>
                   <div className="routine-meta">
                     {r.triggerTime && (
                       <span className="routine-time">
@@ -171,7 +285,7 @@ export default function Routines() {
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                   <span className={`badge ${r.active ? 'badge-green' : 'badge-gray'}`}>
                     {r.active ? 'Active' : 'Paused'}
                   </span>
@@ -183,19 +297,38 @@ export default function Routines() {
                 </div>
               </div>
 
-              {/* Flow steps */}
-              <div className="flow-steps">
-                {(r.steps || DEFAULT_STEPS).map((step, i) => (
-                  <div key={step.id} className="flow-step">
-                    <div className="step-num">{i + 1}</div>
-                    <i className={`ti ${step.icon}`} />
-                    <span>{step.label}</span>
-                    {i < (r.steps || DEFAULT_STEPS).length - 1 && (
-                      <i className="ti ti-arrow-right step-arrow" />
-                    )}
-                  </div>
-                ))}
-              </div>
+              {expandedId === r.id && (
+                <div className="routine-expanded">
+                  {/* Flow steps display */}
+                  {editingStepsId === r.id ? (
+                    <div>
+                      <StepEditor steps={editingSteps} onChange={setEditingSteps} />
+                      <div className="form-actions" style={{ marginTop: 12 }}>
+                        <button className="btn" onClick={() => setEditingStepsId(null)}>Cancel</button>
+                        <button className="btn btn-primary" onClick={() => saveSteps(r.id)}>Save steps</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flow-steps">
+                        {(r.steps || DEFAULT_STEPS).map((step, i) => (
+                          <div key={step.id || i} className="flow-step">
+                            <div className="step-num">{i + 1}</div>
+                            <i className={`ti ${step.icon}`} />
+                            <span>{step.label}</span>
+                            {i < (r.steps || DEFAULT_STEPS).length - 1 && (
+                              <i className="ti ti-arrow-right step-arrow" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="btn btn-sm" style={{ marginTop: 12 }} onClick={() => startEditSteps(r)}>
+                        <i className="ti ti-pencil" /> Edit steps
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

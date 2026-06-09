@@ -103,12 +103,15 @@ export function useAlarmTimer(alarms = []) {
     }
   }, [clearAutoDismiss, stopAudio]);
 
-  // ── Snooze 5 min ───────────────────────────────────────────────────
+  // ── Snooze (configurable duration from localStorage) ─────────────
   const snoozeAlarm = useCallback((alarm) => {
     clearAutoDismiss();
     stopAudio();
     setFiringAlarm(null);
-    setTimeout(() => fireAlarmFn(alarm), 5 * 60 * 1000); // eslint-disable-line no-use-before-define
+    // Read user-configured snooze duration (default 5 min)
+    const snoozeMins = parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10);
+    const snoozeMs = Math.max(1, snoozeMins) * 60 * 1000;
+    setTimeout(() => fireAlarmFn(alarm), snoozeMs); // eslint-disable-line no-use-before-define
   }, [clearAutoDismiss, stopAudio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fire ───────────────────────────────────────────────────────────
@@ -164,7 +167,7 @@ export function useAlarmTimer(alarms = []) {
           renotify: true,
           actions: [
             { action: 'dismiss', title: '✓ Dismiss' },
-            { action: 'snooze',  title: '⏱ Snooze 5m' },
+            { action: 'snooze',  title: `⏱ Snooze ${localStorage.getItem('mars-snooze-duration') || '5'}m` },
           ],
         }).catch(() => {});
       });

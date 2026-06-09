@@ -27,6 +27,16 @@ export default function Settings() {
     () => localStorage.getItem('mars-clock-24hr') === 'true'
   );
 
+  // Snooze duration — persisted to localStorage
+  const [snoozeDuration, setSnoozeDuration] = useState(
+    () => parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10)
+  );
+  const handleSnoozeDuration = (val) => {
+    const n = Math.max(1, Math.min(60, parseInt(val, 10) || 5));
+    setSnoozeDuration(n);
+    localStorage.setItem('mars-snooze-duration', String(n));
+  };
+
   const toggleClockFormat = () => {
     const next = !use24hr;
     setUse24hr(next);
@@ -139,6 +149,29 @@ export default function Settings() {
           </div>
           <input className="settings-input" value={voiceWakeWord}
             onChange={(e) => setVoiceWakeWord(e.target.value)} />
+        </div>
+      </div>
+
+      {/* Alarm Behavior */}
+      <div className="settings-section">
+        <div className="settings-section-title">Alarm Behavior</div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-val">Snooze duration</div>
+            <div className="settings-sub">How long to wait before re-firing a snoozed alarm</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number"
+              className="settings-input"
+              style={{ width: 60, textAlign: 'center' }}
+              value={snoozeDuration}
+              min={1}
+              max={60}
+              onChange={(e) => handleSnoozeDuration(e.target.value)}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>min</span>
+          </div>
         </div>
       </div>
 

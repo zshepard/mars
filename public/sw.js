@@ -611,14 +611,33 @@ self.addEventListener('activate', (event) => {
       const alarmData = await alarmResp.json();
       const now = Date.now();
       const stillPending = [];
-      (alarmData.alarms || []).forEach(alarm => {
+      for (const alarm of (alarmData.alarms || [])) {
         const fireTime = new Date(alarm.fire_at).getTime();
         if (fireTime > now) {
           scheduleAlarmTimer(alarm.alarm_id, alarm.fire_at, alarm.payload);
           stillPending.push(alarm);
+        } else if ((now - fireTime) < 30 * 60 * 1000) {
+          // BUG FIX #4: Alarm fired while device was off — show missed alarm notification
+          try {
+            await self.registration.showNotification(
+              `Missed: ${alarm.payload?.label || 'MARS Alarm'}`,
+              {
+                body: `This alarm fired at ${new Date(alarm.fire_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} while your device was off.`,
+                icon: '/icons/icon-192.png',
+                badge: '/icons/badge-72.png',
+                tag: `missed-${alarm.alarm_id}`,
+                requireInteraction: false,
+                data: { alarm_id: alarm.alarm_id, missed: true, ...alarm.payload },
+                actions: [{ action: 'dismiss', title: '\u2713 Dismiss' }],
+              }
+            );
+          } catch (e) {
+            console.warn('[MARS SW] Could not show missed alarm notification:', e);
+          }
+          // Expired alarms are NOT re-queued — just notify once
         }
-        // Expired alarms are silently dropped
-      });
+        // Alarms older than 30 min are silently dropped
+      }
       // Update cache to only keep still-pending alarms
       await cache.put('/mars/scheduled-alarms', new Response(JSON.stringify({ alarms: stillPending })));
       console.log(`[MARS SW] Restored ${stillPending.length} alarm(s) on activate`);

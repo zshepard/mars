@@ -337,6 +337,65 @@ function useLinkTimer(links) {
   return { linkCountdowns };
 }
 
+
+/* ─── Inline Step Editor (used in Routines tab) ─────────────────── */
+const STEP_ICONS = [
+  'ti-alarm','ti-sun','ti-droplet','ti-coffee','ti-run','ti-barbell',
+  'ti-book','ti-brain','ti-heart-rate','ti-moon','ti-bed','ti-pill',
+  'ti-music','ti-microphone','ti-link','ti-device-mobile','ti-laptop',
+  'ti-checklist','ti-clock','ti-star',
+];
+
+function SimpleStepEditor({ steps, onChange }) {
+  const [newLabel, setNewLabel] = useState('');
+  const [newIcon, setNewIcon]   = useState('ti-alarm');
+
+  const addStep = () => {
+    if (!newLabel.trim()) return;
+    onChange([...steps, { id: `step-${Date.now()}`, label: newLabel.trim(), icon: newIcon }]);
+    setNewLabel('');
+  };
+
+  const deleteStep = (idx) => onChange(steps.filter((_, i) => i !== idx));
+
+  const moveStep = (idx, dir) => {
+    const arr = [...steps];
+    const t = idx + dir;
+    if (t < 0 || t >= arr.length) return;
+    [arr[idx], arr[t]] = [arr[t], arr[idx]];
+    onChange(arr);
+  };
+
+  return (
+    <div className="step-editor">
+      <div className="step-editor-title">Flow Steps</div>
+      {steps.map((step, i) => (
+        <div key={step.id || i} className="step-edit-row">
+          <div className="step-num-sm">{i + 1}</div>
+          <i className={`ti ${step.icon}`} />
+          <span className="step-label-text">{step.label}</span>
+          <div className="step-actions">
+            <button className="icon-btn-sm" onClick={() => moveStep(i, -1)} disabled={i === 0}>
+              <i className="ti ti-arrow-up" /></button>
+            <button className="icon-btn-sm" onClick={() => moveStep(i, 1)} disabled={i === steps.length - 1}>
+              <i className="ti ti-arrow-down" /></button>
+            <button className="icon-btn-sm danger" onClick={() => deleteStep(i)}>
+              <i className="ti ti-trash" /></button>
+          </div>
+        </div>
+      ))}
+      <div className="step-add-row">
+        <select value={newIcon} onChange={e => setNewIcon(e.target.value)}>
+          {STEP_ICONS.map(ic => <option key={ic} value={ic}>{ic.replace('ti-','')}</option>)}
+        </select>
+        <input value={newLabel} onChange={e => setNewLabel(e.target.value)}
+          placeholder="New step..." onKeyDown={e => e.key === 'Enter' && addStep()} />
+        <button className="btn btn-sm" onClick={addStep}><i className="ti ti-plus" /> Add</button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main unified page ──────────────────────────────────────────── */
 export default function Alarms() {
   const { user } = useAuth();
@@ -381,6 +440,18 @@ export default function Alarms() {
   const [editLinkId, setEditLinkId]       = useState(null);
   const [editLinkForm, setEditLinkForm]   = useState(null);
   const [editLinkSaving, setEditLinkSaving] = useState(false);
+
+  // ── Routine step editing state ──────────────────────────────────
+  const [editingStepsId, setEditingStepsId] = useState(null);
+  const [editingSteps, setEditingSteps]     = useState([]);
+  const startEditSteps = (r) => {
+    setEditingStepsId(r.id);
+    setEditingSteps([...(r.steps || DEFAULT_STEPS)]);
+  };
+  const saveSteps = async (id) => {
+    await updateRoutine(id, { steps: editingSteps });
+    setEditingStepsId(null);
+  };
 
   // ── Routine add state ─────────────────────────────────────────────
   const EMPTY_ROUTINE = {
@@ -828,18 +899,33 @@ export default function Alarms() {
                       </button>
                     </div>
                   </div>
-                  <div className="flow-steps">
-                    {(r.steps || DEFAULT_STEPS).map((step, i) => (
-                      <div key={step.id} className="flow-step">
-                        <div className="step-num">{i + 1}</div>
-                        <i className={`ti ${step.icon}`} />
-                        <span>{step.label}</span>
-                        {i < (r.steps || DEFAULT_STEPS).length - 1 && (
-                          <i className="ti ti-arrow-right step-arrow" />
-                        )}
+                  {editingStepsId === r.id ? (
+                    <div style={{ marginTop: 8 }}>
+                      <SimpleStepEditor steps={editingSteps} onChange={setEditingSteps} />
+                      <div className="form-actions" style={{ marginTop: 10 }}>
+                        <button className="btn" onClick={() => setEditingStepsId(null)}>Cancel</button>
+                        <button className="btn btn-primary" onClick={() => saveSteps(r.id)}>Save steps</button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flow-steps">
+                        {(r.steps || DEFAULT_STEPS).map((step, i) => (
+                          <div key={step.id || i} className="flow-step">
+                            <div className="step-num">{i + 1}</div>
+                            <i className={`ti ${step.icon}`} />
+                            <span>{step.label}</span>
+                            {i < (r.steps || DEFAULT_STEPS).length - 1 && (
+                              <i className="ti ti-arrow-right step-arrow" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => startEditSteps(r)}>
+                        <i className="ti ti-pencil" /> Edit steps
+                      </button>
+                    </>
+                  )}
                 </div>
                 </SwipeItem>
               ))}

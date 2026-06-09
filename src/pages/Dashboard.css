@@ -198,3 +198,57 @@
   box-shadow: 0 4px 14px rgba(0,0,0,0.3);
 }
 .qa-btn:active { transform: scale(0.96); box-shadow: none; }
+
+/* ── Missed alarm banner ──────────────────────────────────────── */
+.missed-alarm-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: rgba(230, 57, 70, 0.12);
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  border-radius: var(--radius-sm);
+  color: #e63946;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.missed-alarm-banner i { font-size: 18px; flex-shrink: 0; }
+.missed-alarm-banner span { flex: 1; }
+.missed-dismiss {
+  background: none;
+  border: none;
+  color: #e63946;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity var(--t-fast);
+}
+.missed-dismiss:hover { opacity: 1; }
+
+/* ── Countdown ────────────────────────────────────────────────── */
+.dc-countdown {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  background: rgba(29,158,117,0.10);
+  border: 1px solid rgba(29,158,117,0.22);
+  border-radius: 20px;
+  padding: 3px 10px;
+  margin-top: 4px;
+}
+
+/* ── Alarm pills ──────────────────────────────────────────────── */
+.alarm-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.alarm-pill {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text2);
+}
