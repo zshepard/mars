@@ -60,6 +60,7 @@ import {
   auth,
   db,
   googleProvider,
+  reconnectFirestore,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
@@ -276,6 +277,10 @@ export function AuthProvider({ children }) {
         localStorage.removeItem(GUEST_KEY);
         setGuest(false);
         setUser({ ...firebaseUser, isGuest: false });
+        // Force Firestore to reconnect with the fresh auth token.
+        // This prevents "client is offline" errors that occur when the
+        // Firestore connection was opened before the auth token was ready.
+        reconnectFirestore().catch(() => {});
         syncUserProfile(firebaseUser);
       } else {
         // Firebase returned null — no active session

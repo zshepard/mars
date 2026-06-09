@@ -11,7 +11,7 @@ import {
   setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, reconnectFirestore } from '../firebase/config';
 import './Dashboard.css';
 
 // ── Countdown helper ──────────────────────────────────────────────
@@ -74,15 +74,23 @@ export default function Dashboard() {
     }
 
     setSyncStatus('syncing');
-    setSyncMsg('');
+    setSyncMsg('Reconnecting…');
 
     try {
+      // ── Step 1: Force Firestore to re-establish its network connection ──
+      // This resolves "client is offline" errors caused by a stale WebSocket
+      // connection (e.g. opened before auth token was ready, or blocked by
+      // a service worker / browser extension).
+      await reconnectFirestore();
+      setSyncMsg('Checking profile…');
+
       const uid     = user.uid;
       const userRef = doc(db, 'users', uid);
       const snap    = await getDoc(userRef);
 
       if (!snap.exists()) {
-        // User doc was never created — bootstrap it now so all saves work
+        // ── Step 2a: User doc was never created — bootstrap it now ──────
+        setSyncMsg('Creating profile…');
         await setDoc(userRef, {
           uid,
           googleSub:       uid,
@@ -108,7 +116,7 @@ export default function Dashboard() {
         setSyncStatus('ok');
         setSyncMsg('Profile created — data will now sync');
       } else {
-        // Doc exists — write a heartbeat to confirm write access works
+        // ── Step 2b: Doc exists — write a heartbeat to confirm write access ──
         await setDoc(
           userRef,
           { lastSeenAt: serverTimestamp(), platform: 'web' },
@@ -118,17 +126,23 @@ export default function Dashboard() {
         setSyncMsg('Synced');
       }
     } catch (err) {
-      console.error('[MARS Sync] Manual sync failed:', err);
+      console.error('[MARS Sync] Manual sync failed:', err.code, err.message);
       setSyncStatus('error');
-      setSyncMsg(err.code === 'permission-denied'
-        ? 'Permission denied — try signing out and back in'
-        : `Sync failed: ${err.message}`);
+
+      // Show a human-readable message based on the Firestore error code
+      const msg =
+        err.code === 'unavailable'        ? 'Firestore offline — check your connection or try a hard refresh (Ctrl+Shift+R)' :
+        err.code === 'permission-denied'  ? 'Permission denied — sign out and sign back in' :
+        err.code === 'unauthenticated'    ? 'Not signed in — please sign in again' :
+        err.code === 'failed-precondition'? 'Another tab may be blocking sync — close other tabs and retry' :
+                                            `Error (${err.code || 'unknown'}): ${err.message}`;
+      setSyncMsg(msg);
     }
 
     setTimeout(() => {
       setSyncStatus('idle');
       setSyncMsg('');
-    }, 4000);
+    }, 6000);
   }, [user]);
 
   const nextAlarm = alarms.find((a) => a.enabled !== false);
@@ -252,7 +266,7 @@ export default function Dashboard() {
               className={`qa-btn qa-btn--sync qa-btn--${syncStatus}`}
               onClick={handleSync}
               disabled={syncStatus === 'syncing'}
-              title={syncMsg || 'Manually sync data with Firestore'}
+              title={syncMsg || 'Force reconnect and sync data with Firestore'}
             >
               <i className={`ti ${syncIcon}`} />
               {syncLabel}

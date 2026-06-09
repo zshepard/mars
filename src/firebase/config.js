@@ -7,7 +7,7 @@
 //
 import { initializeApp }               from 'firebase/app';
 import { getAuth, GoogleAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
-import { getFirestore }                from 'firebase/firestore';
+import { getFirestore, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { getMessaging, isSupported }   from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -20,6 +20,7 @@ const firebaseConfig = {
 };
 
 console.info('[MARS Firebase] authDomain =', firebaseConfig.authDomain);
+console.info('[MARS Firebase] projectId  =', firebaseConfig.projectId);
 
 const app = initializeApp(firebaseConfig);
 
@@ -38,9 +39,34 @@ export const VAPID_KEY       = process.env.REACT_APP_FIREBASE_VAPID_KEY || '';
 
 // Check if Firebase is properly configured (not in offline-only mode)
 export const isFirebaseConfigured = () => {
-  return process.env.REACT_APP_FIREBASE_API_KEY && 
+  return process.env.REACT_APP_FIREBASE_API_KEY &&
          process.env.REACT_APP_FIREBASE_API_KEY !== 'offline-mode';
 };
+
+// ---------------------------------------------------------------------------
+// reconnectFirestore — force Firestore to re-establish its WebSocket/gRPC
+// connection. Call this when the app detects a stale "client offline" state.
+//
+// How it works:
+//   1. disableNetwork() tears down the existing transport layer
+//   2. enableNetwork() creates a fresh connection with the current auth token
+//
+// This resolves the common case where the Firestore connection was opened
+// before the auth token was ready, or a stale service worker blocked the
+// initial handshake.
+// ---------------------------------------------------------------------------
+export async function reconnectFirestore() {
+  try {
+    console.info('[MARS Firestore] Forcing network reconnect…');
+    await disableNetwork(db);
+    await enableNetwork(db);
+    console.info('[MARS Firestore] Network reconnected.');
+    return true;
+  } catch (err) {
+    console.warn('[MARS Firestore] Reconnect failed:', err);
+    return false;
+  }
+}
 
 export const getFirebaseMessaging = async () => {
   if (!isFirebaseConfigured()) return null;
