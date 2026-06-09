@@ -16,8 +16,17 @@ export default function Settings() {
     isOnline,
   } = useMars();
   const navigate                                            = useNavigate();
-  const [voiceEnabled, setVoiceEnabled]                    = useState(true);
-  const [voiceWakeWord, setVoiceWakeWord]                  = useState('Hey Mars');
+  // Hey MARS toggle — synced with useWakeWord localStorage key
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    try { return localStorage.getItem('mars-hey-mars') !== 'false'; } catch { return true; }
+  });
+  const handleVoiceEnabled = (val) => {
+    try { localStorage.setItem('mars-hey-mars', val ? 'true' : 'false'); } catch (_) {}
+    setVoiceEnabled(val);
+    // Notify useWakeWord hook to start/stop without page reload
+    window.dispatchEvent(new CustomEvent('mars:hey-mars-toggle', { detail: val }));
+  };
+  const [voiceWakeWord, setVoiceWakeWord] = useState('Hey MARS');
   const [defaultDevice, setDefaultDevice]                  = useState('phone');
   // eslint-disable-next-line no-unused-vars
   const [theme, setTheme]                                  = useState('dark');
@@ -140,7 +149,7 @@ export default function Settings() {
             <div className="settings-sub">Works offline using on-device speech API</div>
           </div>
           <button className={`toggle ${voiceEnabled ? 'on' : ''}`}
-            onClick={() => setVoiceEnabled(!voiceEnabled)} />
+            onClick={() => handleVoiceEnabled(!voiceEnabled)} />
         </div>
         <div className="settings-row">
           <div>

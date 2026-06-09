@@ -83,11 +83,14 @@ export default function Voice() {
 
   // ── Status text ─────────────────────────────────────────────────
   const statusText = () => {
-    if (!voice.supported)              return 'Not supported in this browser';
-    if (wake.detected)                 return '✨ Hey MARS detected — speak your command...';
-    if (voice.listening)               return 'Listening...';
-    if (voice.continuous)              return 'Always listening — say "Hey Mars ..."';
-    if (wake.enabled && wake.active)   return 'Say "Hey MARS" to activate...';
+    if (!voice.supported)                  return 'Not supported in this browser';
+    if (wake.dead)                         return 'Wake listener stopped — tap badge to restart';
+    if (wake.detected)                     return '✨ Hey MARS detected — speak your command...';
+    if (voice.listening && wake.detected)  return 'Listening for command...';
+    if (voice.listening)                   return 'Listening...';
+    if (voice.continuous)                  return 'Always listening — say your command';
+    if (wake.enabled && wake.active)       return 'Say "Hey MARS" to activate...';
+    if (wake.enabled && !wake.active)      return 'Wake listener starting...';
     return 'Tap to speak';
   };
 
@@ -121,6 +124,16 @@ export default function Voice() {
           {wake.detected && (
             <span className="badge badge-detected">
               <i className="ti ti-sparkles" /> Wake word!
+            </span>
+          )}
+          {wake.dead && (
+            <span
+              className="badge badge-red"
+              style={{ cursor: 'pointer' }}
+              onClick={wake.restart}
+              title="Wake listener stopped — click to restart"
+            >
+              <i className="ti ti-alert-triangle" /> Wake stopped — tap to restart
             </span>
           )}
         </div>

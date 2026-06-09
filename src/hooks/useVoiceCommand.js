@@ -28,11 +28,12 @@ function similarity(a, b) {
   return 1 - dp[la][lb] / Math.max(la, lb);
 }
 
-// ── Keyword overlap score ─────────────────────────────────────────────────────
+// ── Keyword overlap score (fix #6: balanced normalisation) ───────────────────
 function keywordScore(transcript, keywords) {
   const words = transcript.toLowerCase().split(/\s+/);
   const hits = keywords.filter(k => words.some(w => w.includes(k) || k.includes(w)));
-  return hits.length / keywords.length;
+  // Normalise by max of keyword count and word count to avoid single-keyword dominance
+  return hits.length / Math.max(keywords.length, words.length, 1);
 }
 
 // ── Strip wake word prefix ────────────────────────────────────────────────────
@@ -85,31 +86,31 @@ export const COMMAND_DEFS = [
     label: 'Go to Alarms',
     category: 'Navigation',
     keywords: ['alarms', 'alarm', 'links', 'routines'],
-    phrases: ['go to alarms', 'open alarms', 'show alarms', 'open alarm page'],
+    phrases: ['go to alarms', 'open alarms', 'show alarms', 'open alarm page', 'alarms page'],
     execute: (_, { navigate }) => { navigate('/alarms'); return { success: true, message: 'Opening Alarms & Links' }; },
   },
   {
     id: 'nav-settings',
     label: 'Go to Settings',
     category: 'Navigation',
-    keywords: ['settings', 'preferences', 'options'],
-    phrases: ['go to settings', 'open settings', 'show settings'],
+    keywords: ['settings', 'preferences', 'config'],
+    phrases: ['go to settings', 'open settings', 'show settings', 'settings page'],
     execute: (_, { navigate }) => { navigate('/settings'); return { success: true, message: 'Opening Settings' }; },
   },
   {
     id: 'nav-platforms',
     label: 'Go to Platforms',
     category: 'Navigation',
-    keywords: ['platforms', 'devices', 'connected'],
-    phrases: ['go to platforms', 'open platforms', 'show platforms'],
+    keywords: ['platforms', 'integrations', 'connections'],
+    phrases: ['go to platforms', 'open platforms', 'show platforms', 'platforms page'],
     execute: (_, { navigate }) => { navigate('/platforms'); return { success: true, message: 'Opening Platforms' }; },
   },
   {
     id: 'nav-voice',
     label: 'Go to Voice',
     category: 'Navigation',
-    keywords: ['voice', 'commands', 'voice control'],
-    phrases: ['go to voice', 'open voice commands', 'show voice'],
+    keywords: ['voice', 'commands', 'speech'],
+    phrases: ['go to voice', 'open voice commands', 'show voice', 'voice page'],
     execute: (_, { navigate }) => { navigate('/voice'); return { success: true, message: 'Opening Voice Commands' }; },
   },
 
@@ -119,7 +120,7 @@ export const COMMAND_DEFS = [
     label: 'Snooze alarm',
     category: 'Alarms',
     keywords: ['snooze'],
-    phrases: ['snooze', 'snooze alarm', 'snooze 10 minutes', 'snooze 5 minutes'],
+    phrases: ['snooze', 'snooze alarm', 'snooze 10 minutes', 'snooze 5 minutes', 'snooze for 5 minutes'],
     execute: (text, { snoozeAlarm, firingAlarm }) => {
       if (!firingAlarm) return { success: false, message: 'No alarm is currently firing' };
       const mins = extractMinutes(text);
@@ -131,8 +132,8 @@ export const COMMAND_DEFS = [
     id: 'alarm-dismiss',
     label: 'Dismiss alarm',
     category: 'Alarms',
-    keywords: ['dismiss', 'stop alarm', 'turn off alarm'],
-    phrases: ['dismiss alarm', 'stop alarm', 'turn off alarm', 'dismiss'],
+    keywords: ['dismiss', 'stop', 'turn off'],
+    phrases: ['dismiss alarm', 'stop alarm', 'turn off alarm', 'dismiss', 'stop it', 'cancel alarm'],
     execute: (_, { dismissAlarm, firingAlarm }) => {
       if (!firingAlarm) return { success: false, message: 'No alarm is currently firing' };
       dismissAlarm(firingAlarm);
@@ -143,8 +144,8 @@ export const COMMAND_DEFS = [
     id: 'alarm-set',
     label: 'Set an alarm',
     category: 'Alarms',
-    keywords: ['set alarm', 'create alarm', 'new alarm', 'wake me'],
-    phrases: ['set alarm for 6 30 am', 'wake me at 7', 'create alarm 8 am', 'set alarm 5 30'],
+    keywords: ['set', 'create', 'new', 'wake', 'alarm'],
+    phrases: ['set alarm for 6 30 am', 'wake me at 7', 'create alarm 8 am', 'set alarm 5 30', 'new alarm at 6'],
     execute: (text, { navigate }) => {
       const time = extractTime(text);
       if (time) {
@@ -159,8 +160,8 @@ export const COMMAND_DEFS = [
     id: 'alarm-disable-all',
     label: 'Disable all alarms',
     category: 'Alarms',
-    keywords: ['disable all', 'turn off all alarms', 'mute all alarms'],
-    phrases: ['disable all alarms', 'turn off all alarms', 'mute all alarms'],
+    keywords: ['disable', 'turn off', 'mute', 'all', 'alarms'],
+    phrases: ['disable all alarms', 'turn off all alarms', 'mute all alarms', 'silence all alarms'],
     execute: (_, { alarms, updateAlarm }) => {
       if (!alarms?.length) return { success: false, message: 'No alarms to disable' };
       alarms.forEach(a => updateAlarm(a.id, { enabled: false }));
@@ -171,12 +172,82 @@ export const COMMAND_DEFS = [
     id: 'alarm-enable-all',
     label: 'Enable all alarms',
     category: 'Alarms',
-    keywords: ['enable all', 'turn on all alarms'],
-    phrases: ['enable all alarms', 'turn on all alarms', 'activate all alarms'],
+    keywords: ['enable', 'turn on', 'activate', 'all', 'alarms'],
+    phrases: ['enable all alarms', 'turn on all alarms', 'activate all alarms', 'unmute all alarms'],
     execute: (_, { alarms, updateAlarm }) => {
       if (!alarms?.length) return { success: false, message: 'No alarms to enable' };
       alarms.forEach(a => updateAlarm(a.id, { enabled: true }));
       return { success: true, message: `Enabled ${alarms.length} alarm${alarms.length > 1 ? 's' : ''}` };
+    },
+  },
+
+  // NEW #8 — next alarm query
+  {
+    id: 'alarm-next',
+    label: 'Next alarm time',
+    category: 'Alarms',
+    keywords: ['next', 'alarm', 'time', 'when'],
+    phrases: ['next alarm', 'what time is my alarm', 'when is my alarm', 'what is my next alarm', 'next alarm time'],
+    execute: (_, { alarms }) => {
+      if (!alarms?.length) return { success: false, message: 'No alarms set' };
+      const enabled = alarms.filter(a => a.enabled);
+      if (!enabled.length) return { success: false, message: 'No active alarms' };
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const sorted = [...enabled].sort((a, b) => {
+        const [ah, am] = (a.time || '00:00').split(':').map(Number);
+        const [bh, bm] = (b.time || '00:00').split(':').map(Number);
+        const aM = ah * 60 + am;
+        const bM = bh * 60 + bm;
+        const aDiff = aM >= nowMins ? aM - nowMins : aM + 1440 - nowMins;
+        const bDiff = bM >= nowMins ? bM - nowMins : bM + 1440 - nowMins;
+        return aDiff - bDiff;
+      });
+      const next = sorted[0];
+      const [h, m] = (next.time || '00:00').split(':').map(Number);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      const label = next.label ? ` — ${next.label}` : '';
+      return { success: true, message: `Next alarm: ${h12}:${String(m).padStart(2,'0')} ${period}${label}` };
+    },
+  },
+  // NEW #9 — cancel alarm by name
+  {
+    id: 'alarm-cancel-named',
+    label: 'Cancel alarm by name',
+    category: 'Alarms',
+    keywords: ['cancel', 'delete', 'remove', 'alarm'],
+    phrases: ['cancel alarm morning', 'delete alarm work', 'remove alarm wake up', 'cancel my morning alarm'],
+    execute: (text, { alarms, updateAlarm }) => {
+      if (!alarms?.length) return { success: false, message: 'No alarms to cancel' };
+      const nameMatch = text.replace(/cancel|delete|remove|alarm/gi, '').trim();
+      if (!nameMatch) return { success: false, message: 'Say the alarm name, e.g. "cancel alarm morning"' };
+      const sim = (a, b) => {
+        a = a.toLowerCase(); b = b.toLowerCase();
+        if (a === b) return 1;
+        const la = a.length, lb = b.length;
+        const dp = Array.from({length:la+1},(_,i)=>Array.from({length:lb+1},(_,j)=>i===0?j:j===0?i:0));
+        for(let i=1;i<=la;i++) for(let j=1;j<=lb;j++) dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+        return 1-dp[la][lb]/Math.max(la,lb);
+      };
+      const found = alarms.find(a => a.label && sim(a.label, nameMatch) > 0.55);
+      if (!found) return { success: false, message: `No alarm named "${nameMatch}" found` };
+      updateAlarm(found.id, { enabled: false });
+      return { success: true, message: `Disabled alarm: ${found.label}` };
+    },
+  },
+  // NEW #10 — list alarms
+  {
+    id: 'alarm-list',
+    label: 'List all alarms',
+    category: 'Alarms',
+    keywords: ['list', 'read', 'show', 'alarms', 'all'],
+    phrases: ['list my alarms', 'read my alarms', 'show all alarms', 'what alarms do I have', 'list alarms'],
+    execute: (_, { alarms, navigate }) => {
+      if (!alarms?.length) return { success: false, message: 'You have no alarms set' };
+      const enabled = alarms.filter(a => a.enabled);
+      navigate('/alarms');
+      return { success: true, message: `${alarms.length} alarm${alarms.length !== 1 ? 's' : ''} total, ${enabled.length} active` };
     },
   },
 
@@ -185,8 +256,8 @@ export const COMMAND_DEFS = [
     id: 'link-open',
     label: 'Open a scheduled link',
     category: 'Links',
-    keywords: ['open link', 'launch link', 'open url'],
-    phrases: ['open link on phone', 'open link on computer', 'launch link', 'open my link'],
+    keywords: ['links', 'scheduled', 'urls'],
+    phrases: ['open scheduled links', 'show links', 'go to links', 'scheduled links'],
     execute: (_, { navigate }) => {
       navigate('/alarms', { state: { tab: 'links' } });
       return { success: true, message: 'Opening Scheduled Links' };
@@ -198,8 +269,8 @@ export const COMMAND_DEFS = [
     id: 'routine-start',
     label: 'Start morning routine',
     category: 'Routines',
-    keywords: ['start routine', 'morning routine', 'start my morning', 'begin routine'],
-    phrases: ['start my morning', 'start routine', 'begin morning routine', 'start morning'],
+    keywords: ['routines', 'routine', 'morning'],
+    phrases: ['open routines', 'show routines', 'go to routines', 'start morning routine', 'begin morning routine', 'morning routine'],
     execute: (_, { navigate }) => {
       navigate('/alarms', { state: { tab: 'routines' } });
       return { success: true, message: 'Opening Routines' };
@@ -209,8 +280,8 @@ export const COMMAND_DEFS = [
     id: 'routine-goodnight',
     label: 'Goodnight / wind-down',
     category: 'Routines',
-    keywords: ['goodnight', 'wind down', 'sleep mode', 'night mode'],
-    phrases: ['goodnight', 'wind down', 'activate sleep mode', 'night mode'],
+    keywords: ['night', 'goodnight', 'wind', 'down', 'sleep', 'bedtime'],
+    phrases: ['goodnight', 'wind down', 'start night routine', 'bedtime routine', 'good night'],
     execute: (_, { navigate }) => {
       navigate('/alarms', { state: { tab: 'routines', filter: 'night' } });
       return { success: true, message: 'Activating wind-down protocol' };
@@ -222,8 +293,8 @@ export const COMMAND_DEFS = [
     id: 'system-status',
     label: 'Check system status',
     category: 'System',
-    keywords: ['status', 'system status', 'how is mars', 'are you online'],
-    phrases: ['system status', 'check status', 'how are you', 'are you online', 'mars status'],
+    keywords: ['status', 'system', 'online', 'check'],
+    phrases: ['system status', 'check status', 'how are you', 'are you online', 'mars status', 'is mars online'],
     execute: (_, { isOnline }) => ({
       success: true,
       message: `MARS is ${isOnline ? 'fully online' : 'running in offline mode'}`,
@@ -233,8 +304,8 @@ export const COMMAND_DEFS = [
     id: 'system-clock-24',
     label: 'Switch to 24-hour clock',
     category: 'System',
-    keywords: ['24 hour', '24h clock', 'military time'],
-    phrases: ['switch to 24 hour', 'use military time', 'enable 24 hour clock'],
+    keywords: ['24', 'hour', 'clock', 'military', 'time'],
+    phrases: ['switch to 24 hour', 'use military time', 'enable 24 hour clock', '24 hour time'],
     execute: () => {
       localStorage.setItem('mars-clock-24hr', 'true');
       window.dispatchEvent(new CustomEvent('mars:clock-format-changed'));
@@ -245,8 +316,8 @@ export const COMMAND_DEFS = [
     id: 'system-clock-12',
     label: 'Switch to 12-hour clock',
     category: 'System',
-    keywords: ['12 hour', '12h clock', 'am pm'],
-    phrases: ['switch to 12 hour', 'use 12 hour clock', 'enable am pm'],
+    keywords: ['12', 'hour', 'clock', 'am', 'pm'],
+    phrases: ['switch to 12 hour', 'use 12 hour clock', 'enable am pm', '12 hour time'],
     execute: () => {
       localStorage.setItem('mars-clock-24hr', 'false');
       window.dispatchEvent(new CustomEvent('mars:clock-format-changed'));
@@ -255,31 +326,35 @@ export const COMMAND_DEFS = [
   },
 ];
 
-// ── Fuzzy command matcher ─────────────────────────────────────────────────────
-// Returns { command, score } for the best matching command, or null if below threshold
+// ── Fuzzy command matcher (DMAIC v2) ─────────────────────────────────────────
+// Fix #7: exact-match fast path  Fix #5: threshold raised to 0.38
 export function matchCommand(transcript) {
   const cleaned = stripWakeWord(transcript);
   if (!cleaned) return null;
 
-  let best = null;
-  let bestScore = 0;
-
+  // ── Fast path: all keywords present + phrase similarity confirms ──────────
+  const words = cleaned.toLowerCase().split(/\s+/);
   for (const cmd of COMMAND_DEFS) {
-    // Phrase similarity (best of all example phrases)
-    const phraseSim = Math.max(...cmd.phrases.map(p => similarity(cleaned, p)));
-    // Keyword overlap
-    const kwScore = keywordScore(cleaned, cmd.keywords);
-    // Combined score — keyword overlap weighted higher for short commands
-    const score = phraseSim * 0.5 + kwScore * 0.5;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = { command: cmd, score };
+    const allKw = cmd.keywords.every(k => words.some(w => w === k || w.includes(k) || k.includes(w)));
+    if (allKw) {
+      const phraseSim = Math.max(...cmd.phrases.map(p => similarity(cleaned, p)));
+      if (phraseSim > 0.42) return { command: cmd, score: 0.9 };
     }
   }
 
-  // Minimum threshold to avoid false positives
-  return bestScore >= 0.25 ? best : null;
+  // ── Fuzzy path ────────────────────────────────────────────────────────────
+  let best = null;
+  let bestScore = 0;
+  for (const cmd of COMMAND_DEFS) {
+    const phraseSim = Math.max(...cmd.phrases.map(p => similarity(cleaned, p)));
+    const kwScore   = keywordScore(cleaned, cmd.keywords);
+    // Weight phrase similarity higher for longer transcripts
+    const w = words.length <= 2 ? 0.35 : 0.55;
+    const score = phraseSim * w + kwScore * (1 - w);
+    if (score > bestScore) { bestScore = score; best = { command: cmd, score }; }
+  }
+
+  return bestScore >= 0.38 ? best : null;
 }
 
 // ── Main hook ─────────────────────────────────────────────────────────────────
@@ -389,9 +464,18 @@ export function useVoiceCommand({
     };
 
     rec.onerror = (e) => {
-      if (e.error === 'no-speech') return; // silent — just restart
-      if (e.error === 'aborted') return;
-      setError(`Microphone error: ${e.error}`);
+      if (e.error === 'no-speech') return;
+      if (e.error === 'aborted')   return;
+      // Fix #11: friendly error messages
+      if (e.error === 'not-allowed') {
+        setError('Microphone access denied. Go to Settings → App Permissions to enable it.');
+      } else if (e.error === 'network') {
+        setError('Network error — voice recognition requires an internet connection.');
+      } else if (e.error === 'service-not-allowed') {
+        setError('Voice recognition is not available in this browser context.');
+      } else {
+        setError(`Microphone error: ${e.error}`);
+      }
       setListening(false);
     };
 
