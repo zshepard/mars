@@ -82,7 +82,7 @@ export default function Topbar({ onMenuToggle, hideBurger = false }) {
         title="Dashboard"
       >
         <img
-          src="/mars-logo.webp"
+          src="/mars-icon.png"
           alt="MARS"
           className="topbar-logo-img"
         />

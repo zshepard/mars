@@ -1,13 +1,12 @@
-/* src/components/Topbar.css */
+/* src/components/Topbar.css — YouTube-style topbar */
+
+/* ── Shell ────────────────────────────────────────────────────── */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  /* Horizontal padding + safe-area sides for notched phones */
+  gap: 0;
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
-  padding-bottom: 0;
-  /* Height = 56px content area — status bar handled by SafeAreaView in native */
   height: 56px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -18,8 +17,7 @@
   transition: border-color var(--transition), background var(--transition);
 }
 
-/* PWA / browser mode — add safe-area-inset-top as padding since there's
-   no native SafeAreaView wrapping it */
+/* PWA / standalone — account for status bar */
 @supports (padding-top: env(safe-area-inset-top)) {
   @media (display-mode: standalone), (display-mode: fullscreen) {
     .topbar {
@@ -33,71 +31,69 @@
 .menu-btn {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px;
+  gap: 5px;
+  padding: 10px;
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   transition: background var(--t-fast);
 }
 .menu-btn:hover { background: var(--bg3); }
 .menu-btn:active { transform: scale(0.92); }
-
 .menu-btn span {
   display: block;
-  width: 20px;
+  width: 18px;
   height: 2px;
   background: var(--text2);
   border-radius: 2px;
-  transition:
-    background var(--t-fast),
-    transform 0.22s var(--ease-spring),
-    opacity var(--t-fast),
-    width var(--t-fast);
+  transition: background var(--t-fast);
 }
 .menu-btn:hover span { background: var(--text); }
 
-/* ── Brand ────────────────────────────────────────────────────── */
+/* ── Brand (home button) ──────────────────────────────────────── */
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-family: var(--font-head);
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.04em;
+  margin-left: 4px;
 }
 
-/* Brand as home button — reset <button> defaults, add hover */
 .topbar-brand--btn {
   background: none;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 8px;
   margin: 0;
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.15s, opacity 0.15s, transform 0.12s;
 }
-.topbar-brand--btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-.topbar-brand--btn:active {
-  opacity: 0.75;
-  transform: scale(0.96);
-}
+.topbar-brand--btn:hover { background: rgba(255,255,255,0.07); }
+.topbar-brand--btn:active { opacity: 0.75; transform: scale(0.96); }
 
 .topbar-logo-img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
-  border-radius: 6px;
   flex-shrink: 0;
 }
 
-.topbar-center { flex: 1; display: flex; justify-content: center; }
+/* ── Center spacer + clock ────────────────────────────────────── */
+.topbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
 
-/* ── Digital Clock ────────────────────────────────────────────── */
 .topbar-clock {
   display: flex;
   flex-direction: column;
@@ -108,7 +104,7 @@
 
 .clock-time {
   font-family: var(--font-head);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--text);
@@ -116,21 +112,20 @@
 }
 
 .clock-seconds {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text2);
   font-weight: 500;
 }
 
 .clock-ampm {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--green);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   align-self: flex-end;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
   margin-left: 3px;
-  vertical-align: super;
 }
 
 .clock-date {
@@ -145,10 +140,10 @@
 @media (max-width: 480px) {
   .clock-seconds { display: none; }
   .clock-date    { display: none; }
-  .clock-time    { font-size: 1.1rem; }
+  .clock-time    { font-size: 1.05rem; }
 }
 
-/* ── Right cluster ────────────────────────────────────────────── */
+/* ── Right cluster (avatar only) ──────────────────────────────── */
 .topbar-right {
   display: flex;
   align-items: center;
@@ -156,11 +151,11 @@
   position: relative;
 }
 
-/* ── Avatar ───────────────────────────────────────────────────── */
 .avatar-btn {
   background: none;
   border: none;
   padding: 0;
+  border-radius: 50%;
   transition: transform var(--t-fast), opacity var(--t-fast);
 }
 .avatar-btn:hover { transform: scale(1.08); }
@@ -193,18 +188,10 @@
   color: var(--green);
 }
 
-/* ── User dropdown — smooth scale + fade from top-right ───────── */
+/* ── User dropdown ────────────────────────────────────────────── */
 @keyframes dropdownEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(-8px);
-    transform-origin: top right;
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    transform-origin: top right;
-  }
+  from { opacity: 0; transform: scale(0.92) translateY(-8px); transform-origin: top right; }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    transform-origin: top right; }
 }
 
 .user-dropdown {
@@ -232,11 +219,7 @@
   padding: 7px 12px;
   font-size: 12px;
   text-align: left;
-  transition:
-    color var(--t-fast),
-    border-color var(--t-fast),
-    background var(--t-fast),
-    transform var(--t-fast);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast), transform var(--t-fast);
 }
 .user-dropdown button:hover {
   color: var(--text);
