@@ -37,12 +37,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Android WebView — push content below status bar */
-@media screen and (max-width: 768px) {
-  .app-shell {
-    padding-top: 0;
-  }
-}
+/* Android status bar is handled natively by SafeAreaView in the Expo WebView host */
 
 html { font-size: 16px; }
 

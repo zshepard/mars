@@ -4,11 +4,11 @@
   align-items: center;
   gap: 12px;
   /* Horizontal padding + safe-area sides for notched phones */
-  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
-  /* Height = 56px + Android status bar height */
-  height: calc(56px + env(safe-area-inset-top, 0px));
-  /* Push content below the status bar */
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: 0;
+  /* Height = 56px content area — status bar handled by SafeAreaView in native */
+  height: 56px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -16,6 +16,17 @@
   z-index: 200;
   flex-shrink: 0;
   transition: border-color var(--transition), background var(--transition);
+}
+
+/* PWA / browser mode — add safe-area-inset-top as padding since there's
+   no native SafeAreaView wrapping it */
+@supports (padding-top: env(safe-area-inset-top)) {
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    .topbar {
+      height: calc(56px + env(safe-area-inset-top, 0px));
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+  }
 }
 
 /* ── Hamburger ────────────────────────────────────────────────── */
@@ -86,9 +97,12 @@
 
 .clock-ampm {
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--green);
-  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: flex-end;
+  margin-bottom: 1px;
   margin-left: 3px;
   vertical-align: super;
 }
@@ -205,25 +219,3 @@
   transform: translateX(2px);
 }
 .user-dropdown button:active { transform: scale(0.97); }
-
-/* ── Clock improvements ───────────────────────────────────────── */
-.clock-ampm {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  align-self: flex-end;
-  margin-bottom: 1px;
-}
-.clock-date {
-  font-size: 10px;
-  color: var(--text3);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-}
-@media (max-width: 480px) {
-  .clock-seconds { display: none; }
-  .clock-date { display: none; }
-  .clock-time { font-size: 1.1rem; }
-}

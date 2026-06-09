@@ -6,13 +6,7 @@
   overflow: hidden;
 }
 
-/* Android WebView — push UI below the status bar */
-.app-shell.mars-webview {
-  padding-top: 28px;
-}
-.app-shell.mars-webview .topbar {
-  top: 28px;
-}
+/* Android WebView — status bar handled natively by SafeAreaView in index.tsx */
 
 .app-body {
   display: flex;

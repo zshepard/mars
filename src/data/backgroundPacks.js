@@ -206,40 +206,60 @@ export const BACKGROUND_PACKS = [
       {
         id: 'marpat-woodland',
         label: 'MARPAT Woodland',
-        preview: 'linear-gradient(135deg, #3d4a1e 0%, #556b2f 30%, #2d3d18 60%, #6b7a3a 100%)',
+        preview: 'linear-gradient(135deg, #3d4a1e 0%, #556b2f 30%, #2d3d18 60%, #8b7355 100%)',
         background: `
-          repeating-conic-gradient(
-            rgba(61,74,30,1) 0% 25%,
-            rgba(85,107,47,0.9) 25% 50%,
-            rgba(45,61,24,1) 50% 75%,
-            rgba(107,122,58,0.8) 75% 100%
-          ) 0 0 / 8px 8px,
-          repeating-conic-gradient(
-            rgba(45,61,24,0.7) 0% 25%,
-            rgba(61,74,30,0.5) 25% 50%,
-            rgba(107,122,58,0.6) 50% 75%,
-            rgba(30,40,15,0.8) 75% 100%
-          ) 4px 4px / 16px 16px,
-          #3d4a1e`,
+          repeating-linear-gradient(
+            0deg,
+            #0f140a 0px, #0f140a 7px,
+            transparent 7px, transparent 14px,
+            #415a2d 14px, #415a2d 21px,
+            transparent 21px, transparent 28px,
+            #8c7b46 28px, #8c7b46 35px,
+            transparent 35px, transparent 42px,
+            #8ca064 42px, #8ca064 49px,
+            transparent 49px, transparent 56px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            #0f140a 0px, #0f140a 14px,
+            transparent 14px, transparent 21px,
+            #8c7b46 21px, #8c7b46 35px,
+            transparent 35px, transparent 42px,
+            #415a2d 42px, #415a2d 56px,
+            transparent 56px, transparent 63px,
+            #8ca064 63px, #8ca064 70px,
+            transparent 70px, transparent 84px
+          ),
+          #82703f`,
       },
       {
         id: 'marpat-desert',
         label: 'MARPAT Desert',
         preview: 'linear-gradient(135deg, #c8a96e 0%, #a08060 30%, #d4b483 60%, #8b7355 100%)',
         background: `
-          repeating-conic-gradient(
-            rgba(200,169,110,1) 0% 25%,
-            rgba(160,128,96,0.9) 25% 50%,
-            rgba(212,180,131,1) 50% 75%,
-            rgba(139,115,85,0.8) 75% 100%
-          ) 0 0 / 8px 8px,
-          repeating-conic-gradient(
-            rgba(160,128,96,0.7) 0% 25%,
-            rgba(200,169,110,0.5) 25% 50%,
-            rgba(139,115,85,0.6) 50% 75%,
-            rgba(180,148,100,0.8) 75% 100%
-          ) 4px 4px / 16px 16px,
-          #c8a96e`,
+          repeating-linear-gradient(
+            0deg,
+            #503c23 0px, #503c23 7px,
+            transparent 7px, transparent 14px,
+            #a08255 14px, #a08255 21px,
+            transparent 21px, transparent 28px,
+            #d2be91 28px, #d2be91 35px,
+            transparent 35px, transparent 42px,
+            #785537 42px, #785537 49px,
+            transparent 49px, transparent 56px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            #503c23 0px, #503c23 14px,
+            transparent 14px, transparent 21px,
+            #d2be91 21px, #d2be91 35px,
+            transparent 35px, transparent 42px,
+            #a08255 42px, #a08255 56px,
+            transparent 56px, transparent 63px,
+            #785537 63px, #785537 70px,
+            transparent 70px, transparent 84px
+          ),
+          #b99a6e`,
       },
       {
         id: 'acu-ucp',
