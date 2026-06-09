@@ -207,13 +207,17 @@ async function syncUserProfile(firebaseUser, platform = 'web') {
       // IMPORTANT: uid and googleSub are NEVER overwritten — they are the
       // immutable identity anchors. Email changes on Google do not change
       // which Firestore document this user owns.
+      //
+      // Use setDoc with merge instead of updateDoc — this is safe even if the
+      // document was never properly created (e.g. first sign-in failed silently
+      // during the broken authDomain period). updateDoc would throw on a missing doc.
       const existing = snap.data();
       const existingPlatforms = existing.platforms || [];
       const updatedPlatforms = existingPlatforms.includes(platform)
         ? existingPlatforms
         : [...existingPlatforms, platform];
 
-      await updateDoc(ref, {
+      await setDoc(ref, {
         // Profile — always refresh from the authoritative Google token
         displayName:     firebaseUser.displayName   || existing.displayName || '',
         email:           firebaseUser.email         || existing.email       || '',
@@ -231,7 +235,7 @@ async function syncUserProfile(firebaseUser, platform = 'web') {
         // Platform tracking
         platform,
         platforms:       updatedPlatforms,
-      });
+      }, { merge: true }); // merge: true preserves uid, googleSub, createdAt, alarms, etc.
     }
   } catch (err) {
     // Non-fatal — user is still signed in even if Firestore write fails

@@ -1,10 +1,17 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth }     from '../hooks/useAuth';
 import { useAlarms }   from '../hooks/useAlarms';
 import { useRoutines } from '../hooks/useRoutines';
 import { useMars }     from '../hooks/useMars';
 import { Link }        from 'react-router-dom';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
 import './Dashboard.css';
 
 // ── Countdown helper ──────────────────────────────────────────────
@@ -53,11 +60,94 @@ export default function Dashboard() {
     return () => window.removeEventListener('mars:missed-alarms', handler);
   }, []);
 
+  // ── Manual sync state ─────────────────────────────────────────────
+  // 'idle' | 'syncing' | 'ok' | 'error'
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [syncMsg, setSyncMsg]       = useState('');
+
+  const handleSync = useCallback(async () => {
+    if (!user || user.isGuest) {
+      setSyncStatus('error');
+      setSyncMsg('Sign in to sync');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+      return;
+    }
+
+    setSyncStatus('syncing');
+    setSyncMsg('');
+
+    try {
+      const uid     = user.uid;
+      const userRef = doc(db, 'users', uid);
+      const snap    = await getDoc(userRef);
+
+      if (!snap.exists()) {
+        // User doc was never created — bootstrap it now so all saves work
+        await setDoc(userRef, {
+          uid,
+          googleSub:       uid,
+          displayName:     user.displayName || '',
+          email:           user.email       || '',
+          emailVerified:   user.emailVerified ?? false,
+          photoURL:        user.photoURL    || '',
+          primaryProvider: user.providerData?.[0]?.providerId || 'unknown',
+          providerData:    (user.providerData || []).map((p) => ({
+            providerId:  p.providerId,
+            uid:         p.uid,
+            email:       p.email        || '',
+            displayName: p.displayName  || '',
+            photoURL:    p.photoURL     || '',
+          })),
+          createdAt:   serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+          lastSeenAt:  serverTimestamp(),
+          loginCount:  1,
+          platform:    'web',
+          platforms:   ['web'],
+        });
+        setSyncStatus('ok');
+        setSyncMsg('Profile created — data will now sync');
+      } else {
+        // Doc exists — write a heartbeat to confirm write access works
+        await setDoc(
+          userRef,
+          { lastSeenAt: serverTimestamp(), platform: 'web' },
+          { merge: true }
+        );
+        setSyncStatus('ok');
+        setSyncMsg('Synced');
+      }
+    } catch (err) {
+      console.error('[MARS Sync] Manual sync failed:', err);
+      setSyncStatus('error');
+      setSyncMsg(err.code === 'permission-denied'
+        ? 'Permission denied — try signing out and back in'
+        : `Sync failed: ${err.message}`);
+    }
+
+    setTimeout(() => {
+      setSyncStatus('idle');
+      setSyncMsg('');
+    }, 4000);
+  }, [user]);
+
   const nextAlarm = alarms.find((a) => a.enabled !== false);
   const activeRoutines = routines.filter((r) => r.active);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const userName = user?.displayName?.split(' ')[0] || 'Guest';
+
+  // Sync button label + icon
+  const syncIcon =
+    syncStatus === 'syncing' ? 'ti-loader-2 spin' :
+    syncStatus === 'ok'      ? 'ti-check'         :
+    syncStatus === 'error'   ? 'ti-alert-circle'  :
+                               'ti-refresh';
+  const syncLabel =
+    syncStatus === 'syncing' ? 'Syncing…' :
+    syncStatus === 'ok'      ? 'Synced'   :
+    syncStatus === 'error'   ? 'Failed'   :
+                               'Sync';
 
   return (
     <div className="dash-page">
@@ -157,7 +247,23 @@ export default function Dashboard() {
             <Link to="/alarms"    className="qa-btn"><i className="ti ti-link" />       Add Link</Link>
             <Link to="/voice"     className="qa-btn"><i className="ti ti-microphone" /> Voice</Link>
             <Link to="/settings"  className="qa-btn"><i className="ti ti-settings" />   Settings</Link>
+            {/* Manual sync button */}
+            <button
+              className={`qa-btn qa-btn--sync qa-btn--${syncStatus}`}
+              onClick={handleSync}
+              disabled={syncStatus === 'syncing'}
+              title={syncMsg || 'Manually sync data with Firestore'}
+            >
+              <i className={`ti ${syncIcon}`} />
+              {syncLabel}
+            </button>
           </div>
+          {/* Sync status message */}
+          {syncMsg && (
+            <div className={`qa-sync-msg qa-sync-msg--${syncStatus}`}>
+              {syncMsg}
+            </div>
+          )}
         </div>
       </div>
     </div>

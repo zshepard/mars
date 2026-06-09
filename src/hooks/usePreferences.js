@@ -20,7 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   doc,
   onSnapshot,
-  updateDoc,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -126,7 +126,9 @@ export function usePreferences(user) {
     pendingWrite.current = setTimeout(async () => {
       try {
         const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, { [`preferences.${key}`]: value });
+        // setDoc with merge works even if the user doc or preferences field
+        // doesn't exist yet — updateDoc would throw in that case.
+        await setDoc(userRef, { preferences: { [key]: value } }, { merge: true });
       } catch (e) {
         console.warn('[MARS Prefs] Failed to write preference:', key, e);
       }

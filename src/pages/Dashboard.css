@@ -199,6 +199,31 @@
 }
 .qa-btn:active { transform: scale(0.96); box-shadow: none; }
 
+/* Sync button state variants */
+.qa-btn--sync { cursor: pointer; }
+.qa-btn--sync:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+.qa-btn--ok   { border-color: rgba(29,158,117,0.5) !important; color: var(--green) !important; }
+.qa-btn--ok i { color: var(--green) !important; }
+.qa-btn--error { border-color: rgba(230,57,70,0.5) !important; color: #e63946 !important; }
+.qa-btn--error i { color: #e63946 !important; }
+
+/* Sync status message below the grid */
+.qa-sync-msg {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+.qa-sync-msg--ok    { color: var(--green);  background: rgba(29,158,117,0.08);  border: 1px solid rgba(29,158,117,0.2); }
+.qa-sync-msg--error { color: #e63946;       background: rgba(230,57,70,0.08);   border: 1px solid rgba(230,57,70,0.2); }
+.qa-sync-msg--syncing { color: var(--text2); background: var(--bg3); border: 1px solid var(--border); }
+
+/* Spinning loader icon */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin 0.9s linear infinite; }
+
 /* ── Missed alarm banner ──────────────────────────────────────── */
 .missed-alarm-banner {
   display: flex;
