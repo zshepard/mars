@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.3.0'; // device-targeted alarms + prefs sync fixes
+const MARS_VERSION  = 'mars-v1.4.0'; // periodic background alarm check for Android
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -742,14 +742,84 @@ self.addEventListener('activate', (event) => {
 });
 
 // ════════════════════════════════════════════════════════════════
-//  PERIODIC BACKGROUND SYNC — daily routine pre-fetch
-//  (Android Chrome only — keeps alarms fresh even if app not open)
+//  PERIODIC BACKGROUND SYNC — alarm check + daily routine pre-fetch
+//  (Android Chrome only — wakes SW every ~15 min even when app closed)
 // ════════════════════════════════════════════════════════════════
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'mars-daily-refresh') {
+  if (event.tag === 'mars-alarm-check') {
+    event.waitUntil(checkAndFireDueAlarms());
+  } else if (event.tag === 'mars-daily-refresh') {
     event.waitUntil(refreshTodaysRoutine());
   }
 });
+
+// Check the persisted alarm cache and fire any alarms that are due or overdue.
+// This is the Android background fallback — called every ~15 min by periodicsync.
+async function checkAndFireDueAlarms() {
+  console.log('[MARS SW] Periodic alarm check...');
+  const cache = await caches.open(ALARM_CACHE);
+  const alarmResp = await cache.match('/mars/scheduled-alarms');
+  if (!alarmResp) return;
+
+  const alarmData = await alarmResp.json();
+  const now = Date.now();
+  const WINDOW_MS = 16 * 60 * 1000; // 16 min window (slightly more than 15 min interval)
+  const stillPending = [];
+
+  for (const alarm of (alarmData.alarms || [])) {
+    const fireTime = new Date(alarm.fire_at).getTime();
+
+    if (fireTime <= now + WINDOW_MS && fireTime > now - 5 * 60 * 1000) {
+      // Due within the next 16 min OR missed within the last 5 min — fire it now
+      const targetDevice = alarm.payload?.device || alarm.payload?.open_device || 'all';
+      if (!shouldFireOnThisDevice(targetDevice)) {
+        stillPending.push(alarm); // keep for other device
+        continue;
+      }
+      const p = alarm.payload || {};
+      const isMissed = fireTime < now;
+      const title = isMissed
+        ? `Missed: ${p.label || 'MARS Alarm'}`
+        : (p.label || 'MARS Alarm');
+      const body = isMissed
+        ? `This alarm was scheduled for ${new Date(fireTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : (p.body || 'Time to wake up!');
+      try {
+        await self.registration.showNotification(title, {
+          body,
+          icon:              '/icons/icon-192.png',
+          badge:             '/icons/badge-72.png',
+          vibrate:           [300, 100, 300, 100, 500],
+          requireInteraction: !isMissed,
+          data:              { alarm_id: alarm.alarm_id, missed: isMissed, ...p },
+          tag:               alarm.alarm_id,
+          renotify:          true,
+          actions: isMissed
+            ? [{ action: 'dismiss', title: '\u2713 Dismiss' }]
+            : [
+                { action: 'dismiss', title: '\u2713 Dismiss' },
+                { action: 'snooze',  title: '\u23f1 Snooze 5m' },
+              ],
+        });
+        console.log(`[MARS SW] Periodic check fired alarm: ${alarm.alarm_id}`);
+      } catch (e) {
+        console.warn('[MARS SW] Periodic check — could not show notification:', e);
+      }
+      // Don't re-add to stillPending — alarm has fired
+    } else if (fireTime > now) {
+      // Still in the future beyond our window — keep it and ensure timer is running
+      stillPending.push(alarm);
+      // Re-schedule the in-memory timer in case SW was restarted
+      if (!scheduledAlarmTimers[alarm.alarm_id]) {
+        scheduleAlarmTimer(alarm.alarm_id, alarm.fire_at, alarm.payload);
+      }
+    }
+    // Alarms more than 5 min overdue are silently dropped
+  }
+
+  await cache.put('/mars/scheduled-alarms', new Response(JSON.stringify({ alarms: stillPending })));
+  console.log(`[MARS SW] Periodic check done. ${stillPending.length} alarm(s) still pending.`);
+}
 
 async function refreshTodaysRoutine() {
   console.log('[MARS SW] Periodic sync — refreshing today\'s routine...');

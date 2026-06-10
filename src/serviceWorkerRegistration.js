@@ -26,6 +26,29 @@ export function register(config = {}) {
         Notification.requestPermission();
       }
 
+      // Register periodic background sync for Android alarm firing.
+      // This wakes the SW every ~15 min so alarms fire even when the app is closed.
+      if ('periodicSync' in registration) {
+        navigator.permissions.query({ name: 'periodic-background-sync' }).then((status) => {
+          if (status.state === 'granted') {
+            registration.periodicSync.register('mars-alarm-check', {
+              minInterval: 15 * 60 * 1000, // 15 minutes
+            }).then(() => {
+              console.log('[MARS] Periodic alarm check registered (15 min interval)');
+            }).catch((e) => {
+              console.warn('[MARS] Could not register periodic alarm check:', e);
+            });
+          } else {
+            console.log('[MARS] Periodic background sync not granted (state:', status.state, ')');
+          }
+        }).catch(() => {
+          // permissions.query may not support periodic-background-sync on all browsers
+          registration.periodicSync.register('mars-alarm-check', {
+            minInterval: 15 * 60 * 1000,
+          }).catch(() => {});
+        });
+      }
+
       window.__MARS_SW__ = registration;
     }).catch(console.error);
 
