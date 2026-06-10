@@ -20,12 +20,16 @@
 }
 .dash-greeting h1 {
   font-family: var(--font-head);
-  font-size: 2rem;
+  font-size: clamp(1.6rem, 3vw, 2.4rem); /* scales with viewport so long names fit */
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--text);
   margin-bottom: 5px;
-  line-height: 1.15;
+  line-height: 1.2;
+  white-space: normal;   /* allow wrapping — no truncation */
+  overflow: visible;
+  max-width: 100%;
+  word-break: break-word;
 }
 .dash-greeting p {
   font-size: 0.875rem;
