@@ -141,11 +141,14 @@ export function useAlarms(uid) {
       const now = Date.now();
       const missed = items.filter((alarm) => {
         if (alarm.enabled === false) return false;
-        const fireMs = new Date(alarm.lastFiredAt || 0).getTime();
         const expectedMs = lastExpectedFireTime(alarm.time, alarm.days);
-        // Alarm was expected to fire in the last 30 minutes but hasn't been dismissed
-        return expectedMs && expectedMs < now && (now - expectedMs) < 30 * 60 * 1000
-          && fireMs < expectedMs;
+        if (!expectedMs || expectedMs >= now || (now - expectedMs) >= 30 * 60 * 1000) return false;
+        // For guest users, lastFiredAt may be stored in localStorage by useAlarmTimer
+        const storedFired = localStorage.getItem(`mars-alarm-lastfired-${alarm.id}`);
+        const fireMs = storedFired
+          ? new Date(storedFired).getTime()
+          : (alarm.lastFiredAt ? new Date(alarm.lastFiredAt).getTime() : 0);
+        return fireMs < expectedMs;
       });
       if (missed.length > 0) {
         window.dispatchEvent(new CustomEvent('mars:missed-alarms', { detail: missed }));
@@ -165,11 +168,14 @@ export function useAlarms(uid) {
       if (alarm.enabled === false) return false;
       const expectedMs = lastExpectedFireTime(alarm.time, alarm.days);
       if (!expectedMs || expectedMs >= now || (now - expectedMs) >= 30 * 60 * 1000) return false;
-      // Only flag as missed if the alarm was NOT already fired at or after the expected time.
-      // lastFiredAt is written to Firestore by the app when an alarm is dismissed/snoozed.
-      const lastFiredMs = alarm.lastFiredAt
+      // Check Firestore lastFiredAt first; fall back to localStorage (written immediately
+      // on dismiss/snooze, before the Firestore write completes).
+      const firestoreMs = alarm.lastFiredAt
         ? (alarm.lastFiredAt.toMillis ? alarm.lastFiredAt.toMillis() : new Date(alarm.lastFiredAt).getTime())
         : 0;
+      const storedFired = localStorage.getItem(`mars-alarm-lastfired-${alarm.id}`);
+      const localMs = storedFired ? new Date(storedFired).getTime() : 0;
+      const lastFiredMs = Math.max(firestoreMs, localMs);
       return lastFiredMs < expectedMs;
     });
     if (missed.length > 0) {

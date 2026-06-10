@@ -44,7 +44,11 @@ export default function Voice() {
   const { user }                                           = useAuth();
   const { isOnline }                                       = useMars();
   const { alarms, updateAlarm }                            = useAlarms(user?.uid);
-  const { firingAlarm, dismissAlarm, snoozeAlarm }         = useAlarmTimer(alarms);
+  const { firingAlarm, dismissAlarm, snoozeAlarm }         = useAlarmTimer(alarms, {
+    onAlarmFired: (alarmId) => {
+      updateAlarm(alarmId, { lastFiredAt: new Date().toISOString() });
+    },
+  });
   const { routines }                                       = useRoutines(user?.uid);
 
   const [search, setSearch]       = useState('');

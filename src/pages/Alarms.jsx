@@ -428,7 +428,13 @@ export default function Alarms() {
   const { alarms, loading: alarmsLoading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
   const { links,  loading: linksLoading,  addLink,  updateLink,  deleteLink  } = useScheduledLinks(user?.uid);
   const { routines, loading: routinesLoading, addRoutine, updateRoutine, deleteRoutine } = useRoutines(user?.uid);
-  const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms);
+  const { firingAlarm, dismissAlarm, snoozeAlarm, countdowns } = useAlarmTimer(alarms, {
+    // Write lastFiredAt to Firestore on dismiss/snooze so the missed-alarm check
+    // (which reads from the Firestore doc) won't re-trigger after a real fire.
+    onAlarmFired: (alarmId) => {
+      updateAlarm(alarmId, { lastFiredAt: new Date().toISOString() });
+    },
+  });
   const { linkCountdowns } = useLinkTimer(links);
 
   const TABS = ['alarms', 'links', 'routines'];

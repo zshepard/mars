@@ -90,7 +90,10 @@ function formatCountdown(ms) {
   return `${s}s`;
 }
 
-export function useAlarmTimer(alarms = []) {
+// Optional `onAlarmFired(alarmId)` callback — called on dismiss or snooze so the
+// caller (e.g. Alarms page) can write lastFiredAt to Firestore, which prevents
+// the missed-alarm check from re-triggering for an alarm that already fired.
+export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
   const [firingAlarm, setFiringAlarm] = useState(null);
   // countdowns: { [alarmId]: "Xh Ym" | null }
   const [countdowns, setCountdowns]   = useState({});
@@ -122,18 +125,18 @@ export function useAlarmTimer(alarms = []) {
     stopAudio();
     setFiringAlarm(null);
     if (alarm?.id) {
-      // Record fire time so the missed-alarm check won't re-trigger for this alarm.
-      // For guest users this is stored in localStorage; for signed-in users the
-      // Firestore alarm doc should also be updated (handled separately in useAlarms).
+      // Write lastFiredAt to localStorage (guest) and call onAlarmFired so the
+      // caller can persist it to Firestore (signed-in). This prevents the
+      // missed-alarm check from re-triggering on every Firestore snapshot.
       try {
-        const key = `mars-alarm-lastfired-${alarm.id}`;
-        localStorage.setItem(key, new Date().toISOString());
+        localStorage.setItem(`mars-alarm-lastfired-${alarm.id}`, new Date().toISOString());
       } catch {}
+      if (typeof onAlarmFired === 'function') onAlarmFired(alarm.id);
     }
     if (alarm?.openUrl) {
       openExternalUrl(alarm.openUrl);
     }
-  }, [clearAutoDismiss, stopAudio]);
+  }, [clearAutoDismiss, stopAudio, onAlarmFired]);
 
   // ── Snooze (configurable duration from localStorage) ─────────────
   const snoozeAlarm = useCallback((alarm) => {
@@ -144,12 +147,13 @@ export function useAlarmTimer(alarms = []) {
       try {
         localStorage.setItem(`mars-alarm-lastfired-${alarm.id}`, new Date().toISOString());
       } catch {}
+      if (typeof onAlarmFired === 'function') onAlarmFired(alarm.id);
     }
     // Read user-configured snooze duration (default 5 min)
     const snoozeMins = parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10);
     const snoozeMs = Math.max(1, snoozeMins) * 60 * 1000;
     setTimeout(() => fireAlarmFn(alarm), snoozeMs); // eslint-disable-line no-use-before-define
-  }, [clearAutoDismiss, stopAudio]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clearAutoDismiss, stopAudio, onAlarmFired]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fire ───────────────────────────────────────────────────────────
   const fireAlarmFn = useCallback((alarm) => {

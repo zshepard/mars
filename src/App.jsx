@@ -57,12 +57,13 @@ function AppShell() {
     };
   }, []);
 
-  // Sidebar: open by default on desktop, closed on mobile/TWA
-  const [sidebarOpen, setSidebarOpen] = useState(() => !getIsMobile());
+  // Sidebar: always collapsed (icon-only rail) on desktop; closed on mobile/TWA.
+  // The user requested the collapsed icon-only rail as the permanent desktop state.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Keep sidebarOpen in sync when isMobile changes (e.g. window resize)
+  // Keep sidebarOpen closed when isMobile changes (e.g. window resize)
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    setSidebarOpen(false);
   }, [isMobile]);
 
   // ── Subscribe to Firestore preferences so background + clock format sync
@@ -94,26 +95,10 @@ function AppShell() {
     return () => window.removeEventListener('mars:background-pack-changed', handler);
   }, []);
 
-  // ── Swipe to open/close sidebar (desktop only — mobile uses BottomNav) ──
+  // Swipe gestures removed — sidebar is permanently collapsed on desktop.
   const touchStart = useRef(null);
-
-  const onTouchStart = useCallback((e) => {
-    if (!isMobile) {
-      const t = e.touches[0];
-      touchStart.current = { x: t.clientX, y: t.clientY };
-    }
-  }, [isMobile]);
-
-  const onTouchEnd = useCallback((e) => {
-    if (!touchStart.current) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.current.x;
-    const dy = Math.abs(t.clientY - touchStart.current.y);
-    touchStart.current = null;
-    if (Math.abs(dx) < 50 || dy > 60) return;
-    if (dx > 0) setSidebarOpen(true);
-    else        setSidebarOpen(false);
-  }, []);
+  const onTouchStart = useCallback(() => {}, []);
+  const onTouchEnd   = useCallback(() => {}, []);
 
   return (
     <div
@@ -124,7 +109,7 @@ function AppShell() {
       {/* Topbar — on mobile/TWA, hide the hamburger since BottomNav handles navigation */}
       <Topbar
         onMenuToggle={() => setSidebarOpen(p => !p)}
-        hideBurger={isMobile}
+        hideBurger={true}
       />
 
       <div className="app-body" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
