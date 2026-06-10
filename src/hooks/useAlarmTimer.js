@@ -28,9 +28,21 @@ function soundExt(soundId) {
   return WAV_IDS.has(soundId) ? 'wav' : 'mp3';
 }
 
+// Returns true if this device matches the alarm's target device
+function isTargetDevice(openDevice) {
+  if (!openDevice || openDevice === 'all') return true;
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  if (openDevice === 'phone')    return isMobile;
+  if (openDevice === 'computer') return !isMobile;
+  return true;
+}
+
 // Returns true if the alarm should fire right now
 function shouldFireNow(alarm) {
   if (!alarm.enabled) return false;
+  // Device targeting — skip if this device is not the target
+  if (!isTargetDevice(alarm.openDevice)) return false;
   const now = new Date();
   const [h, m] = (alarm.time || '').split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return false;

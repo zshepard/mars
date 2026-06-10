@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.2.0'; // bumped to bust all v1.1.x caches
+const MARS_VERSION  = 'mars-v1.3.0'; // device-targeted alarms + prefs sync fixes
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -501,6 +501,17 @@ self.addEventListener('message', async (event) => {
 // ════════════════════════════════════════════════════════════════
 const scheduledAlarmTimers = {};
 
+// ── Detect whether this device matches the alarm's target ─────────────────
+// Returns true if the alarm should fire on this device.
+function shouldFireOnThisDevice(targetDevice) {
+  if (!targetDevice || targetDevice === 'all') return true;
+  const ua = (self.navigator && self.navigator.userAgent) || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  if (targetDevice === 'phone')    return isMobile;
+  if (targetDevice === 'computer') return !isMobile;
+  return true; // unknown target — fire everywhere
+}
+
 function scheduleAlarmTimer(alarm_id, fire_at, payload) {
   // Clear any existing timer for this alarm
   if (scheduledAlarmTimers[alarm_id]) {
@@ -521,6 +532,12 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
     const aData = aResp ? await aResp.json() : { alarms: [] };
     aData.alarms = aData.alarms.filter(a => a.alarm_id !== alarm_id);
     await aCache.put('/mars/scheduled-alarms', new Response(JSON.stringify(aData)));
+    // ── Device targeting check — skip if this device is not the target
+    const targetDevice = payload.device || payload.open_device || 'all';
+    if (!shouldFireOnThisDevice(targetDevice)) {
+      console.log(`[MARS SW] Alarm ${alarm_id} skipped on this device (target: ${targetDevice})`);
+      return;
+    }
     // Fire the notification
     await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
       body: payload.body || 'Time to start your routine.',

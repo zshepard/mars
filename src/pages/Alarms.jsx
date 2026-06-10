@@ -6,8 +6,21 @@ import { useAlarmTimer }     from '../hooks/useAlarmTimer';
 import { useScheduledLinks } from '../hooks/useScheduledLinks';
 import { useRoutines, DEFAULT_STEPS } from '../hooks/useRoutines';
 import { useSwipe }          from '../hooks/useSwipe';
+import { usePreferences }    from '../hooks/usePreferences';
 import SwipeItem             from '../components/SwipeItem';
 import './Alarms.css';
+
+// ── Format a HH:MM string according to the user's clock format preference ──
+function formatAlarmTime(timeStr, use24hr) {
+  if (!timeStr) return timeStr;
+  const [hStr, mStr] = timeStr.split(':');
+  const h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  if (use24hr) return `${String(h).padStart(2,'0')}:${m}`;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12  = (h % 12 || 12);
+  return `${h12}:${m} ${ampm}`;
+}
 
 /* ─── Native bridge helpers ─────────────────────────────────────── */
 // Returns true when running inside the MARS Android WebView
@@ -410,6 +423,8 @@ function SimpleStepEditor({ steps, onChange }) {
 /* ─── Main unified page ──────────────────────────────────────────── */
 export default function Alarms() {
   const { user } = useAuth();
+  const { prefs } = usePreferences(user);
+  const use24hr = prefs.clockFormat === '24';
   const { alarms, loading: alarmsLoading, addAlarm, updateAlarm, deleteAlarm } = useAlarms(user?.uid);
   const { links,  loading: linksLoading,  addLink,  updateLink,  deleteLink  } = useScheduledLinks(user?.uid);
   const { routines, loading: routinesLoading, addRoutine, updateRoutine, deleteRoutine } = useRoutines(user?.uid);
@@ -578,7 +593,7 @@ export default function Alarms() {
         <div className="alarm-overlay">
           <div className="alarm-firing-card">
             <div className="alarm-firing-icon">⏰</div>
-            <div className="alarm-firing-time">{firingAlarm.time}</div>
+            <div className="alarm-firing-time">{formatAlarmTime(firingAlarm.time, use24hr)}</div>
             <div className="alarm-firing-label">{firingAlarm.label || 'Alarm'}</div>
             {firingAlarm.openUrl && (
               <div className="alarm-firing-url">
@@ -670,7 +685,7 @@ export default function Alarms() {
                     <SwipeItem onDelete={() => deleteAlarm(alarm.id)} label="Delete">
                     <div className={`alarm-row card ${alarm.enabled ? '' : 'disabled'}`}>
                       <div className="alarm-time-block">
-                        <div className="alarm-time">{alarm.time}</div>
+                        <div className="alarm-time">{formatAlarmTime(alarm.time, use24hr)}</div>
                         <div className="alarm-label">{alarm.label || 'Untitled alarm'}</div>
                         <div className="alarm-days">
                           {(alarm.days || []).map(d => <span key={d} className="day-tag">{d}</span>)}
@@ -771,7 +786,7 @@ export default function Alarms() {
                     <SwipeItem onDelete={() => deleteLink(link.id)} label="Delete">
                     <div className={`alarm-row card ${link.enabled ? '' : 'disabled'}`}>
                       <div className="alarm-time-block">
-                        <div className="alarm-time">{link.time}</div>
+                        <div className="alarm-time">{formatAlarmTime(link.time, use24hr)}</div>
                         <div className="alarm-label">{link.label || 'Untitled link'}</div>
                         <div className="alarm-days">
                           {(link.days || []).map(d => <span key={d} className="day-tag">{d}</span>)}

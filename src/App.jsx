@@ -15,6 +15,8 @@ import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
 import BackgroundPacks                                 from './pages/BackgroundPacks';
 import { getPackById }                                 from './data/backgroundPacks';
+import { usePreferences }                              from './hooks/usePreferences';
+import { useAuth }                                     from './hooks/useAuth';
 import PullToRefresh                                   from './components/PullToRefresh';
 import './styles/global.css';
 import './App.css';
@@ -23,6 +25,11 @@ function AppShell() {
   // Sidebar: open by default on desktop, closed on mobile
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700);
   const isMobile = window.innerWidth <= 700;
+
+  // ── Subscribe to Firestore preferences so background + clock format sync
+  // across devices without requiring the Settings or BackgroundPacks page to be open.
+  const { user } = useAuth();
+  usePreferences(user); // side-effect only — fires mirrorToLocal on every Firestore update
 
   // Restore saved background pack on every app load
   useEffect(() => {
