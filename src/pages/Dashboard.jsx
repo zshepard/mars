@@ -173,10 +173,10 @@ export default function Dashboard() {
   const nextLink = activeLinks.slice().sort((a, b) => nextLinkFireMs(a) - nextLinkFireMs(b))[0] || null;
   const hour = new Date().getHours();
   const greeting =
-    hour >= 5  && hour < 12 ? 'Good morning'   :
-    hour >= 12 && hour < 17 ? 'Good afternoon'  :
-    hour >= 17 && hour < 21 ? 'Good evening'    :
-                              'Good night';        // 9 PM – 4:59 AM
+    hour >= 2  && hour < 12 ? 'Good morning'   :  // 02:00 – 11:59
+    hour >= 12 && hour < 17 ? 'Good afternoon'  :  // 12:00 – 16:59
+    hour >= 17 && hour < 20 ? 'Good evening'    :  // 17:00 – 19:59
+                              'Good night';         // 20:00 – 01:59
   // Use the full display name the user set in Settings, falling back gracefully.
   const userName = user?.displayName?.trim() || 'there';
 
