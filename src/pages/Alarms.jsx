@@ -974,9 +974,16 @@ export default function Alarms() {
                           </div>
                         ))}
                       </div>
-                      <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => startEditSteps(r)}>
-                        <i className="ti ti-pencil" /> Edit steps
-                      </button>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <button className="btn btn-sm btn-primary" onClick={() => {
+                          window.dispatchEvent(new CustomEvent('mars:start-routine', { detail: r }));
+                        }}>
+                          <i className="ti ti-player-play" /> Start
+                        </button>
+                        <button className="btn btn-sm" onClick={() => startEditSteps(r)}>
+                          <i className="ti ti-pencil" /> Edit steps
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>

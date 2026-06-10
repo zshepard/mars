@@ -18,6 +18,7 @@ import { getPackById }                                 from './data/backgroundPa
 import { usePreferences }                              from './hooks/usePreferences';
 import { useAuth }                                     from './hooks/useAuth';
 import PullToRefresh                                   from './components/PullToRefresh';
+import RoutinePlayer                                   from './components/RoutinePlayer';
 import './styles/global.css';
 import './App.css';
 
@@ -116,6 +117,9 @@ function AppShell() {
       {/* Mobile-only: bottom nav bar + FAB */}
       <BottomNav />
       <FAB />
+
+      {/* Global routine player overlay — activated by mars:start-routine event */}
+      <RoutinePlayer />
     </div>
   );
 }

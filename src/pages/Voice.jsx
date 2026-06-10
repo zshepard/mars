@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useAuth }           from '../hooks/useAuth';
 import { useAlarms }         from '../hooks/useAlarms';
 import { useAlarmTimer }     from '../hooks/useAlarmTimer';
+import { useRoutines }       from '../hooks/useRoutines';
 import { useMars }           from '../hooks/useMars';
 import { useVoiceCommand, COMMAND_DEFS } from '../hooks/useVoiceCommand';
 import { useWakeWord }       from '../hooks/useWakeWord';
@@ -44,12 +45,14 @@ export default function Voice() {
   const { isOnline }                                       = useMars();
   const { alarms, updateAlarm }                            = useAlarms(user?.uid);
   const { firingAlarm, dismissAlarm, snoozeAlarm }         = useAlarmTimer(alarms);
+  const { routines }                                       = useRoutines(user?.uid);
 
   const [search, setSearch]       = useState('');
   const [activeTab, setActiveTab] = useState('commands'); // 'commands' | 'history'
 
   const voice = useVoiceCommand({
     alarms,
+    routines,
     updateAlarm,
     firingAlarm,
     dismissAlarm,

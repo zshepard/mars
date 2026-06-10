@@ -267,13 +267,67 @@ export const COMMAND_DEFS = [
   // ── Routines ────────────────────────────────────────────────────────────────
   {
     id: 'routine-start',
-    label: 'Start morning routine',
+    label: 'Start [name] routine',
     category: 'Routines',
-    keywords: ['routines', 'routine', 'morning'],
-    phrases: ['open routines', 'show routines', 'go to routines', 'start morning routine', 'begin morning routine', 'morning routine'],
-    execute: (_, { navigate }) => {
+    keywords: ['start', 'begin', 'run', 'routine', 'launch'],
+    phrases: [
+      'start my routine', 'begin routine', 'run routine', 'launch routine',
+      'start morning routine', 'start evening routine', 'start workout routine',
+      'start my morning routine', 'start my evening routine', 'start my workout routine',
+      'begin morning routine', 'morning routine', 'open routines', 'show routines',
+    ],
+    execute: (text, { routines, navigate }) => {
+      // Try to fuzzy-match a routine name from the transcript
+      if (routines && routines.length > 0) {
+        const cleaned = text.toLowerCase()
+          .replace(/^(start|begin|run|launch|open|show)\s+(my\s+)?/i, '')
+          .replace(/\s*routine\s*$/i, '')
+          .trim();
+        let best = null;
+        let bestScore = 0;
+        routines.forEach(r => {
+          const rName = (r.name || '').toLowerCase();
+          // Exact substring match
+          if (cleaned && rName.includes(cleaned)) {
+            const sc = cleaned.length / rName.length;
+            if (sc > bestScore) { bestScore = sc; best = r; }
+          }
+          // Word overlap
+          const rWords = rName.split(/\s+/);
+          const tWords = cleaned.split(/\s+/);
+          const overlap = tWords.filter(w => rWords.some(rw => rw.includes(w) || w.includes(rw))).length;
+          const sc2 = overlap / Math.max(rWords.length, tWords.length, 1);
+          if (sc2 > bestScore) { bestScore = sc2; best = r; }
+        });
+        if (best && bestScore > 0.3) {
+          window.dispatchEvent(new CustomEvent('mars:start-routine', { detail: best }));
+          return { success: true, message: `Starting routine: ${best.name}` };
+        }
+        // No name match — just start the first active routine
+        const active = routines.find(r => r.active !== false);
+        if (active) {
+          window.dispatchEvent(new CustomEvent('mars:start-routine', { detail: active }));
+          return { success: true, message: `Starting routine: ${active.name}` };
+        }
+      }
+      // Fallback: navigate to routines tab
       navigate('/alarms', { state: { tab: 'routines' } });
       return { success: true, message: 'Opening Routines' };
+    },
+  },
+  {
+    id: 'routine-list',
+    label: 'List routines',
+    category: 'Routines',
+    keywords: ['list', 'routines', 'show', 'all'],
+    phrases: ['list routines', 'show all routines', 'what routines do i have', 'my routines'],
+    execute: (_, { routines, navigate }) => {
+      navigate('/alarms', { state: { tab: 'routines' } });
+      if (!routines || routines.length === 0) {
+        return { success: true, message: 'No routines set up yet' };
+      }
+      const names = routines.map(r => r.name).join(', ');
+      return { success: true, message: `Your routines: ${names}` };
     },
   },
   {
@@ -282,7 +336,17 @@ export const COMMAND_DEFS = [
     category: 'Routines',
     keywords: ['night', 'goodnight', 'wind', 'down', 'sleep', 'bedtime'],
     phrases: ['goodnight', 'wind down', 'start night routine', 'bedtime routine', 'good night'],
-    execute: (_, { navigate }) => {
+    execute: (text, { routines, navigate }) => {
+      // Try to find a night/evening routine
+      if (routines && routines.length > 0) {
+        const night = routines.find(r =>
+          /night|evening|sleep|wind|bed/i.test(r.name) && r.active !== false
+        );
+        if (night) {
+          window.dispatchEvent(new CustomEvent('mars:start-routine', { detail: night }));
+          return { success: true, message: `Starting routine: ${night.name}` };
+        }
+      }
       navigate('/alarms', { state: { tab: 'routines', filter: 'night' } });
       return { success: true, message: 'Activating wind-down protocol' };
     },
@@ -360,6 +424,7 @@ export function matchCommand(transcript) {
 // ── Main hook ─────────────────────────────────────────────────────────────────
 export function useVoiceCommand({
   alarms = [],
+  routines = [],
   updateAlarm,
   firingAlarm,
   dismissAlarm,
@@ -390,6 +455,7 @@ export function useVoiceCommand({
   const context = {
     navigate,
     alarms,
+    routines,
     updateAlarm,
     firingAlarm,
     dismissAlarm,
@@ -415,7 +481,7 @@ export function useVoiceCommand({
     setResult(res);
     setHistory(h => [{ text, ...res, ts: Date.now() }, ...h].slice(0, 20));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alarms, updateAlarm, firingAlarm, dismissAlarm, snoozeAlarm, isOnline]);
+  }, [alarms, routines, updateAlarm, firingAlarm, dismissAlarm, snoozeAlarm, isOnline]);
 
   const stop = useCallback(() => {
     continuousRef.current = false;
