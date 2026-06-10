@@ -38,6 +38,20 @@ export function register(config = {}) {
         case 'MARS_ALARM_SNOOZED':   dispatch('mars:alarm-snoozed',   event.data); break;
         case 'MARS_SYNC_QUEUE':      dispatch('mars:sync-queue', { queue });       break;
         case 'MARS_DAILY_REFRESH':   dispatch('mars:daily-refresh', {});           break;
+        // Routine player start — triggered by notification click when app is backgrounded
+        case 'MARS_START_ROUTINE': {
+          const routine = event.data.routine
+            ? (typeof event.data.routine === 'string'
+                ? JSON.parse(event.data.routine)
+                : event.data.routine)
+            : null;
+          if (routine) dispatch('mars:start-routine', { routine });
+          break;
+        }
+        // Open URL — triggered by scheduled link notification click
+        case 'MARS_OPEN_URL':
+          dispatch('mars:open-url', { url: event.data.url, device: event.data.device });
+          break;
         default: break;
       }
     });

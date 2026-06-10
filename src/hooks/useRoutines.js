@@ -48,13 +48,16 @@ function scheduleRoutineTrigger(routine) {
     alarm_id: `routine-${routine.id}`,
     fire_at:  nextRoutineFireTime(routine.triggerTime, routine.days),
     payload:  {
-      label:       routine.name,
-      body:        `Time to start: ${routine.name}`,
-      sound:       routine.sound || 'alarm-default',
-      routine_id:  routine.id,
-      routine_step: routine.steps?.[0]?.id || null,
-      open_url:    routine.openUrl || null,
-      open_device: routine.openDevice || 'phone',
+      label:             routine.name,
+      body:              `Time to start: ${routine.name}`,
+      sound:             routine.sound || 'alarm-default',
+      routine_id:        routine.id,
+      routine_step:      routine.steps?.[0]?.id || null,
+      open_url:          routine.openUrl || null,
+      open_device:       routine.openDevice || 'phone',
+      // These fields let the SW start the RoutinePlayer on notification click
+      notification_type: 'routine',
+      routine_data:      JSON.stringify(routine),
     },
   });
 }

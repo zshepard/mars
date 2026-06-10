@@ -289,11 +289,12 @@ self.addEventListener('push', (event) => {
 });
 
 // ════════════════════════════════════════════════════════════════
-//  NOTIFICATION CLICK — dismiss or snooze, then open URL
+//  NOTIFICATION CLICK — dismiss or snooze, then open URL / start routine
 // ════════════════════════════════════════════════════════════════
 self.addEventListener('notificationclick', (event) => {
   const { action, notification } = event;
-  const { alarm_id, open_url, open_device, routine_step } = notification.data || {};
+  const data = notification.data || {};
+  const { alarm_id, open_url, open_device, routine_step, notification_type, routine_data, link_url } = data;
   notification.close();
 
   if (action === 'snooze') {
@@ -301,7 +302,42 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  // Dismiss + proceed to next routine step
+  // ── Scheduled link notification click — open the URL ──────────
+  if (notification_type === 'scheduled-link') {
+    event.waitUntil((async () => {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (link_url) {
+        if (clients.length > 0) {
+          await clients[0].focus();
+          clients[0].postMessage({ type: 'MARS_OPEN_URL', url: link_url, device: open_device });
+        } else {
+          await self.clients.openWindow(link_url);
+        }
+      } else if (clients.length > 0) {
+        await clients[0].focus();
+      } else {
+        await self.clients.openWindow('/');
+      }
+    })());
+    return;
+  }
+
+  // ── Routine notification click — focus app and start routine player ──
+  if (notification_type === 'routine') {
+    event.waitUntil((async () => {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const focusedClient = clients.length > 0 ? await clients[0].focus() : await self.clients.openWindow('/');
+      if (focusedClient && routine_data) {
+        // Small delay to let the page re-mount after focus
+        setTimeout(() => {
+          focusedClient.postMessage({ type: 'MARS_START_ROUTINE', routine: routine_data });
+        }, 600);
+      }
+    })());
+    return;
+  }
+
+  // ── Default: alarm dismiss + proceed ──────────────────────────
   event.waitUntil(handleAlarmDismiss({ alarm_id, open_url, open_device, routine_step }));
 });
 
@@ -602,18 +638,43 @@ function scheduleNextLinkOpen(link_id, time, days, url, device) {
 
 async function fireLinkOpen(link_id, url, device) {
   console.log(`[MARS SW] Opening scheduled link: ${url} on ${device}`);
-  // Open the URL
-  if (device === 'phone' || device === 'all') {
-    const clients = await self.clients.matchAll({ type: 'window' });
-    if (clients.length > 0) {
-      clients[0].postMessage({ type: 'MARS_OPEN_URL', url, device });
+
+  // Check if this device should handle the link
+  if (!shouldFireOnThisDevice(device)) {
+    console.log(`[MARS SW] Link ${link_id} skipped on this device (target: ${device})`);
+  } else {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const visibleClient = clients.find(c => c.visibilityState === 'visible');
+
+    if (visibleClient) {
+      // App is in the foreground — open URL directly
+      visibleClient.postMessage({ type: 'MARS_OPEN_URL', url, device });
+    } else {
+      // App is backgrounded or tab is hidden — show a notification
+      await self.registration.showNotification('MARS — Scheduled Link', {
+        body: url,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/badge-72.png',
+        vibrate: [200, 100, 200],
+        requireInteraction: false,
+        tag: `link-${link_id}`,
+        renotify: true,
+        data: {
+          notification_type: 'scheduled-link',
+          link_id,
+          link_url: url,
+          open_device: device,
+        },
+        actions: [
+          { action: 'open', title: '\u2197 Open' },
+          { action: 'dismiss', title: '\u2715 Dismiss' },
+        ],
+      });
     }
-    await self.clients.openWindow(url);
   }
-  // Notify other devices via background sync
-  if (device === 'computer' || device === 'all') {
-    await queueBackgroundSync('open-url-remote', { link_id, url, device, timestamp: Date.now() });
-  }
+
+  // Queue for background sync to other devices
+  await queueBackgroundSync('open-url-remote', { link_id, url, device, timestamp: Date.now() });
   // Re-schedule for next occurrence
   const linkCache = await caches.open(ALARM_CACHE);
   const resp = await linkCache.match('/mars/scheduled-links');
