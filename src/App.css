@@ -6,8 +6,6 @@
   overflow: hidden;
 }
 
-/* Android WebView — status bar handled natively by SafeAreaView in index.tsx */
-
 .app-body {
   display: flex;
   flex: 1;
@@ -34,7 +32,7 @@
   animation: pageEnter var(--t-page) both;
 }
 
-/* On mobile, pad the main content so it clears the bottom nav bar */
+/* ── Mobile layout: narrow screens ─────────────────────────────── */
 @media (max-width: 700px) {
   .app-main--mobile-padded {
     padding-bottom: 70px;
@@ -44,6 +42,28 @@
   .app-body .sidebar-overlay {
     display: none !important;
   }
+}
+
+/* ── TWA / standalone mode — always use mobile layout regardless of screen width ── */
+/* This ensures the Android TWA app always gets the mobile nav/layout              */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .app-main--mobile-padded {
+    padding-bottom: 70px;
+  }
+  .app-body .sidebar,
+  .app-body .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ── JS-driven mobile class (set by App.jsx getIsMobile) ────────── */
+/* Fallback for cases where media queries alone aren't enough       */
+.app-shell--mobile .app-main--mobile-padded {
+  padding-bottom: 70px;
+}
+.app-shell--mobile .app-body .sidebar,
+.app-shell--mobile .app-body .sidebar-overlay {
+  display: none !important;
 }
 
 /* Mobile overlay when sidebar is open */

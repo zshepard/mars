@@ -22,10 +22,48 @@ import RoutinePlayer                                   from './components/Routin
 import './styles/global.css';
 import './App.css';
 
+/**
+ * Detect whether the current environment should use the mobile layout.
+ * True when:
+ *   - Screen width ≤ 700 CSS pixels, OR
+ *   - Running as a TWA / PWA in standalone/fullscreen display mode
+ *     (covers Android TWA regardless of reported screen width)
+ */
+function getIsMobile() {
+  const isNarrow = window.innerWidth <= 700;
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.navigator.standalone === true; // legacy Safari PWA
+  return isNarrow || isStandalone;
+}
+
 function AppShell() {
-  // Sidebar: open by default on desktop, closed on mobile
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 700);
-  const isMobile = window.innerWidth <= 700;
+  // ── Reactive mobile detection — updates on resize and display-mode change ──
+  const [isMobile, setIsMobile] = useState(getIsMobile);
+
+  useEffect(() => {
+    function update() { setIsMobile(getIsMobile()); }
+    window.addEventListener('resize', update);
+    // Also listen for display-mode changes (rare but possible)
+    const mq1 = window.matchMedia('(display-mode: standalone)');
+    const mq2 = window.matchMedia('(display-mode: fullscreen)');
+    mq1.addEventListener('change', update);
+    mq2.addEventListener('change', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      mq1.removeEventListener('change', update);
+      mq2.removeEventListener('change', update);
+    };
+  }, []);
+
+  // Sidebar: open by default on desktop, closed on mobile/TWA
+  const [sidebarOpen, setSidebarOpen] = useState(() => !getIsMobile());
+
+  // Keep sidebarOpen in sync when isMobile changes (e.g. window resize)
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
   // ── Subscribe to Firestore preferences so background + clock format sync
   // across devices without requiring the Settings or BackgroundPacks page to be open.
@@ -60,11 +98,11 @@ function AppShell() {
   const touchStart = useRef(null);
 
   const onTouchStart = useCallback((e) => {
-    if (window.innerWidth > 700) {
+    if (!isMobile) {
       const t = e.touches[0];
       touchStart.current = { x: t.clientX, y: t.clientY };
     }
-  }, []);
+  }, [isMobile]);
 
   const onTouchEnd = useCallback((e) => {
     if (!touchStart.current) return;
@@ -79,19 +117,21 @@ function AppShell() {
 
   return (
     <div
-      className="app-shell"
+      className={`app-shell${isMobile ? ' app-shell--mobile' : ''}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Topbar — on mobile, hide the hamburger since BottomNav handles navigation */}
+      {/* Topbar — on mobile/TWA, hide the hamburger since BottomNav handles navigation */}
       <Topbar
         onMenuToggle={() => setSidebarOpen(p => !p)}
         hideBurger={isMobile}
       />
 
       <div className="app-body" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
-        {/* Sidebar — hidden on mobile via CSS, BottomNav takes over */}
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {/* Sidebar — hidden on mobile/TWA via CSS, BottomNav takes over */}
+        {!isMobile && (
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        )}
 
         <main className="app-main app-main--mobile-padded">
           <Routes>
@@ -112,11 +152,11 @@ function AppShell() {
       </div>
 
       {/* Pull-to-refresh — mobile only, attaches to .app-main scroll container */}
-      <PullToRefresh />
+      {isMobile && <PullToRefresh />}
 
-      {/* Mobile-only: bottom nav bar + FAB */}
-      <BottomNav />
-      <FAB />
+      {/* Mobile/TWA: bottom nav bar + FAB */}
+      {isMobile && <BottomNav />}
+      {isMobile && <FAB />}
 
       {/* Global routine player overlay — activated by mars:start-routine event */}
       <RoutinePlayer />

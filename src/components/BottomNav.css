@@ -5,7 +5,9 @@
   display: none; /* hidden on desktop */
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .bottom-nav {
     display: flex;
     align-items: stretch;
@@ -78,7 +80,9 @@
   display: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .bottom-more-overlay {
     display: block;
     position: fixed;
@@ -94,7 +98,9 @@
   display: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .bottom-more-drawer {
     display: block;
     position: fixed;
