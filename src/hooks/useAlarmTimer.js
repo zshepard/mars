@@ -117,6 +117,12 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
+    // Tell Android TWA to stop any native ringtone started via MARS_PLAY_SOUND bridge
+    if (window.ReactNativeWebView) {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MARS_STOP_SOUND' }));
+      } catch {}
+    }
   }, []);
 
   // ── Dismiss ────────────────────────────────────────────────────────
@@ -172,8 +178,24 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
 
     setFiringAlarm(alarm);
 
-    const ext = soundExt(alarm.sound || 'alarm-default');
-    const audio = new Audio(`/sounds/${alarm.sound || 'alarm-default'}.${ext}`);
+    // Determine which sound to play on the web side.
+    // Native Android ringtone URIs (content://) can't be loaded as <Audio> on web —
+    // post a bridge message so the Android TWA can play the native ringtone,
+    // and fall back to alarm-default for the web Audio element.
+    const rawSound = alarm.sound || 'alarm-default';
+    const isNativeUri = rawSound.startsWith('content://');
+    if (isNativeUri && window.ReactNativeWebView) {
+      // Tell the Android host to play this native ringtone URI
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'MARS_PLAY_SOUND',
+        uri: rawSound,
+        loop: true,
+      }));
+    }
+    // Always start the web Audio element too (falls back to default for native URIs)
+    const webSound = isNativeUri ? 'alarm-default' : rawSound;
+    const ext = soundExt(webSound);
+    const audio = new Audio(`/sounds/${webSound}.${ext}`);
     audio.loop = true;
     audio.volume = 1.0;
     audio.play().catch(() => {});

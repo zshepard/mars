@@ -258,11 +258,22 @@ self.addEventListener('push', (event) => {
         { action: 'snooze',  title: '⏱ Snooze 5m' },
       ];
 
+  // Resolve the correct sound URL — WAV sounds need .wav extension, MP3 sounds need .mp3.
+  // Native Android ringtone URIs (content://) cannot be played by the SW; fall back to default.
+  const WAV_SOUND_IDS = new Set([
+    'alarm-default','alarm-gentle','alarm-military','chime',
+    'Argon','Carbon','Helium','Krypton','Neon','Osmium','Oxygen','Platinum',
+  ]);
+  const isNativeUri = typeof sound === 'string' && sound.startsWith('content://');
+  const soundUrl = isNativeUri
+    ? '/sounds/alarm-default.wav'
+    : `/sounds/${sound}.${WAV_SOUND_IDS.has(sound) ? 'wav' : 'mp3'}`;
+
   const options = {
     body,
     icon,
     badge,
-    sound: `/sounds/${sound}.mp3`,
+    sound: soundUrl,
     vibrate: [200, 100, 200, 100, 400],
     requireInteraction: !auto_dismiss,
     actions,
@@ -577,11 +588,23 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
     // Mark as fired BEFORE showing notification so the periodic check
     // won't fire it again if it runs in the same window.
     await markAlarmFired(alarm_id);
+    // Resolve the correct sound URL for this alarm.
+    // WAV sounds need .wav; MP3 sounds need .mp3; native Android URIs fall back to default.
+    const SW_WAV_IDS = new Set([
+      'alarm-default','alarm-gentle','alarm-military','chime',
+      'Argon','Carbon','Helium','Krypton','Neon','Osmium','Oxygen','Platinum',
+    ]);
+    const alarmSound = payload.sound || 'alarm-default';
+    const isNativeRingtone = typeof alarmSound === 'string' && alarmSound.startsWith('content://');
+    const alarmSoundUrl = isNativeRingtone
+      ? '/sounds/alarm-default.wav'
+      : `/sounds/${alarmSound}.${SW_WAV_IDS.has(alarmSound) ? 'wav' : 'mp3'}`;
     // Fire the notification
     await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
       body: payload.body || 'Time to start your routine.',
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-72.png',
+      sound: alarmSoundUrl,
       vibrate: [300, 100, 300, 100, 500],
       requireInteraction: true,
       data: { alarm_id, ...payload },

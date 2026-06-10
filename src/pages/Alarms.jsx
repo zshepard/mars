@@ -217,23 +217,31 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
         <div className="form-field">
           <label>Sound</label>
           <div className="sound-selector">
-            {isNativeApp() && nativeRingtones.length > 0 ? (
-              /* Native ringtone picker — shows system alarm sounds from Android */
-              <select value={form.sound} onChange={e => set('sound', e.target.value)}>
-                {nativeRingtones.map(r => (
-                  <option key={r.id} value={r.uri}>{r.label}</option>
-                ))}
-              </select>
+            {isNativeApp() && loadingRingtones ? (
+              <select disabled><option>Loading system sounds…</option></select>
             ) : (
-              /* Web fallback — shows built-in web sounds */
               <>
                 <select value={form.sound} onChange={e => set('sound', e.target.value)}>
-                  {loadingRingtones
-                    ? <option>Loading system sounds...</option>
-                    : SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)
-                  }
+                  {/* Built-in web sounds always shown */}
+                  <optgroup label="Built-in Sounds">
+                    {SOUNDS.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.label}</option>)}
+                  </optgroup>
+                  {/* Native Android ringtones — only available inside the app */}
+                  {nativeRingtones.length > 0 && (
+                    <optgroup label="Device Ringtones">
+                      {nativeRingtones.map(r => (
+                        <option key={r.id} value={r.uri}>{r.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {/* If the saved sound is a native URI but ringtones haven't loaded yet,
+                      show a placeholder so the select doesn't display a raw content:// string */}
+                  {form.sound && form.sound.startsWith('content://') && nativeRingtones.length === 0 && (
+                    <option value={form.sound}>Device ringtone (app only)</option>
+                  )}
                 </select>
-                {!isNativeApp() && (
+                {/* Preview button — only works for built-in web sounds */}
+                {!form.sound?.startsWith('content://') && (
                   <button type="button" className="btn btn-preview" onClick={() => previewSound(form.sound)}>
                     <i className="ti ti-player-play" /> Preview
                   </button>
