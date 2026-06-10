@@ -164,7 +164,13 @@ export function useAlarms(uid) {
     const missed = alarms.filter((alarm) => {
       if (alarm.enabled === false) return false;
       const expectedMs = lastExpectedFireTime(alarm.time, alarm.days);
-      return expectedMs && expectedMs < now && (now - expectedMs) < 30 * 60 * 1000;
+      if (!expectedMs || expectedMs >= now || (now - expectedMs) >= 30 * 60 * 1000) return false;
+      // Only flag as missed if the alarm was NOT already fired at or after the expected time.
+      // lastFiredAt is written to Firestore by the app when an alarm is dismissed/snoozed.
+      const lastFiredMs = alarm.lastFiredAt
+        ? (alarm.lastFiredAt.toMillis ? alarm.lastFiredAt.toMillis() : new Date(alarm.lastFiredAt).getTime())
+        : 0;
+      return lastFiredMs < expectedMs;
     });
     if (missed.length > 0) {
       window.dispatchEvent(new CustomEvent('mars:missed-alarms', { detail: missed }));

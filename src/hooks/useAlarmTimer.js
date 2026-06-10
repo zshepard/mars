@@ -121,6 +121,15 @@ export function useAlarmTimer(alarms = []) {
     clearAutoDismiss();
     stopAudio();
     setFiringAlarm(null);
+    if (alarm?.id) {
+      // Record fire time so the missed-alarm check won't re-trigger for this alarm.
+      // For guest users this is stored in localStorage; for signed-in users the
+      // Firestore alarm doc should also be updated (handled separately in useAlarms).
+      try {
+        const key = `mars-alarm-lastfired-${alarm.id}`;
+        localStorage.setItem(key, new Date().toISOString());
+      } catch {}
+    }
     if (alarm?.openUrl) {
       openExternalUrl(alarm.openUrl);
     }
@@ -131,6 +140,11 @@ export function useAlarmTimer(alarms = []) {
     clearAutoDismiss();
     stopAudio();
     setFiringAlarm(null);
+    if (alarm?.id) {
+      try {
+        localStorage.setItem(`mars-alarm-lastfired-${alarm.id}`, new Date().toISOString());
+      } catch {}
+    }
     // Read user-configured snooze duration (default 5 min)
     const snoozeMins = parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10);
     const snoozeMs = Math.max(1, snoozeMins) * 60 * 1000;
@@ -141,6 +155,16 @@ export function useAlarmTimer(alarms = []) {
   const fireAlarmFn = useCallback((alarm) => {
     // Clear any lingering auto-dismiss from a previous fire
     clearAutoDismiss();
+
+    // Close any existing SW notification for this alarm so it doesn't
+    // stack on top of the in-page overlay when the app is in the foreground.
+    if (alarm?.id) {
+      navigator.serviceWorker?.ready.then((reg) => {
+        reg.getNotifications({ tag: alarm.id }).then((notifs) => {
+          notifs.forEach((n) => n.close());
+        }).catch(() => {});
+      }).catch(() => {});
+    }
 
     setFiringAlarm(alarm);
 
@@ -178,23 +202,11 @@ export function useAlarmTimer(alarms = []) {
       }, delayMs);
     }
 
-    // Bonus: SW notification if permission is granted
-    if ('Notification' in window && Notification.permission === 'granted') {
-      navigator.serviceWorker?.ready.then((reg) => {
-        reg.showNotification(alarm.label || 'MARS Alarm', {
-          body: alarm.openUrl ? `Tap to open: ${alarm.openUrl}` : 'Time to start your routine.',
-          icon: '/icons/icon-192.png',
-          vibrate: [300, 100, 300, 100, 500],
-          requireInteraction: !alarm.autoDismiss,
-          tag: alarm.id,
-          renotify: true,
-          actions: [
-            { action: 'dismiss', title: '✓ Dismiss' },
-            { action: 'snooze',  title: `⏱ Snooze ${localStorage.getItem('mars-snooze-duration') || '5'}m` },
-          ],
-        }).catch(() => {});
-      });
-    }
+    // NOTE: We do NOT call reg.showNotification() here.
+    // The service worker's scheduleAlarmTimer already fires a notification
+    // when the alarm time arrives (even in background). Calling it again
+    // from the page would produce a duplicate notification every time.
+    // The in-page UI overlay (firingAlarm state) handles the foreground case.
   }, [clearAutoDismiss, dismissAlarm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Main interval: every second ────────────────────────────────────

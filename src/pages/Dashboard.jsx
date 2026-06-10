@@ -1,9 +1,10 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth }     from '../hooks/useAuth';
-import { useAlarms }   from '../hooks/useAlarms';
-import { useRoutines } from '../hooks/useRoutines';
-import { useMars }     from '../hooks/useMars';
+import { useAuth }           from '../hooks/useAuth';
+import { useAlarms }         from '../hooks/useAlarms';
+import { useRoutines }       from '../hooks/useRoutines';
+import { useScheduledLinks } from '../hooks/useScheduledLinks';
+import { useMars }           from '../hooks/useMars';
 import { Link }        from 'react-router-dom';
 import {
   doc,
@@ -145,8 +146,31 @@ export default function Dashboard() {
     }, 6000);
   }, [user]);
 
+  const { links } = useScheduledLinks(user?.uid);
+
   const nextAlarm = alarms.find((a) => a.enabled !== false);
   const activeRoutines = routines.filter((r) => r.active);
+  const activeLinks = links.filter((l) => l.enabled !== false);
+
+  // Next scheduled link — the one whose next fire time is soonest
+  function nextLinkFireMs(link) {
+    if (!link.time) return Infinity;
+    const [h, m] = link.time.split(':').map(Number);
+    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const now = new Date();
+    for (let offset = 0; offset <= 7; offset++) {
+      const c = new Date(now);
+      c.setDate(now.getDate() + offset);
+      c.setHours(h, m, 0, 0);
+      if (c <= now) continue;
+      const days = link.days || [];
+      if (days.length === 0 || days.includes(DAY_NAMES[c.getDay()])) {
+        return c.getTime() - now.getTime();
+      }
+    }
+    return Infinity;
+  }
+  const nextLink = activeLinks.slice().sort((a, b) => nextLinkFireMs(a) - nextLinkFireMs(b))[0] || null;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const userName = user?.displayName?.split(' ')[0] || 'Guest';
@@ -229,6 +253,29 @@ export default function Dashboard() {
           )}
         </Link>
 
+
+        {/* Scheduled Links */}
+        <Link to="/alarms" className="dash-card">
+          <div className="dc-header">
+            <i className="ti ti-link" />
+            <span>Scheduled Links</span>
+          </div>
+          {nextLink ? (
+            <>
+              <div className="dc-big" style={{ fontSize: '1.6rem' }}>{nextLink.time}</div>
+              <div className="dc-sub">{nextLink.label || 'Scheduled Link'}</div>
+              <div className="dc-countdown">{timeUntil(nextLink.time, nextLink.days)}</div>
+              <div className="dc-link"><i className="ti ti-external-link" /><span>{nextLink.url}</span></div>
+              {activeLinks.length > 1 && (
+                <div className="dc-sub" style={{ marginTop: 6, fontSize: '0.75rem', opacity: 0.6 }}>
+                  +{activeLinks.length - 1} more link{activeLinks.length - 1 !== 1 ? 's' : ''}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="dc-sub">No scheduled links</div>
+          )}
+        </Link>
 
         {/* All alarms summary */}
         <Link to="/alarms" className="dash-card">
