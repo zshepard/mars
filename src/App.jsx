@@ -15,6 +15,7 @@ import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
 import BackgroundPacks                                 from './pages/BackgroundPacks';
 import { getPackById }                                 from './data/backgroundPacks';
+import PullToRefresh                                   from './components/PullToRefresh';
 import './styles/global.css';
 import './App.css';
 
@@ -101,6 +102,9 @@ function AppShell() {
           </Routes>
         </main>
       </div>
+
+      {/* Pull-to-refresh — mobile only, attaches to .app-main scroll container */}
+      <PullToRefresh />
 
       {/* Mobile-only: bottom nav bar + FAB */}
       <BottomNav />

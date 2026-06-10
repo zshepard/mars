@@ -1,0 +1,55 @@
+/* src/components/PullToRefresh.css */
+
+/* ── Pull-to-refresh indicator ───────────────────────────────────────────── */
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  /* Start hidden above the viewport */
+  transform: translateX(-50%) translateY(-56px);
+  opacity: 0;
+
+  /* Circle pill */
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg2, #1a1a2e);
+  border: 1.5px solid var(--border, rgba(255,255,255,0.1));
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+/* Icon inside the circle */
+.ptr-icon {
+  font-size: 20px;
+  color: var(--text3, rgba(255,255,255,0.4));
+  transition: transform 0.1s linear, color 0.15s ease;
+  display: block;
+}
+
+/* When the user has pulled far enough — turn green */
+.ptr-indicator.ptr-ready {
+  border-color: rgba(29, 158, 117, 0.6);
+  background: rgba(29, 158, 117, 0.12);
+}
+.ptr-indicator.ptr-ready .ptr-icon {
+  color: var(--green, #1d9e75);
+}
+
+/* Spinning state while reload is in progress */
+.ptr-indicator.ptr-refreshing .ptr-icon {
+  animation: ptr-spin 0.6s linear infinite;
+  color: var(--green, #1d9e75);
+}
+
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
