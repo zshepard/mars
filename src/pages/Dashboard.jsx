@@ -172,8 +172,13 @@ export default function Dashboard() {
   }
   const nextLink = activeLinks.slice().sort((a, b) => nextLinkFireMs(a) - nextLinkFireMs(b))[0] || null;
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const userName = user?.displayName?.split(' ')[0] || 'Guest';
+  const greeting =
+    hour >= 5  && hour < 12 ? 'Good morning'   :
+    hour >= 12 && hour < 17 ? 'Good afternoon'  :
+    hour >= 17 && hour < 21 ? 'Good evening'    :
+                              'Good night';        // 9 PM – 4:59 AM
+  // Use the full display name the user set in Settings, falling back gracefully.
+  const userName = user?.displayName?.trim() || 'there';
 
   // Sync button label + icon
   const syncIcon =
