@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { scheduleAlarm, cancelAlarm } from './useAlarms';
 import { queueHomeAction } from '../serviceWorkerRegistration';
+import { isNative, onNativeMessage } from '../marsBridge';
 
 // ── Permission status helpers ─────────────────────────────────────────────────
 // Returns 'granted' | 'denied' | 'prompt' | 'unsupported'
@@ -18,6 +19,7 @@ async function queryPermission(name) {
 export function useMars() {
   const [isOnline,        setIsOnline]        = useState(navigator.onLine);
   const [swReady,         setSwReady]         = useState(false);
+  const [nativeReady,     setNativeReady]     = useState(false);
   const [lastDismissed,   setLastDismissed]   = useState(null);
 
   // ── Permission states ───────────────────────────────────────────
@@ -40,9 +42,18 @@ export function useMars() {
 
   // ── Service worker ──────────────────────────────────────────────
   useEffect(() => {
+    if (isNative()) { setSwReady(false); return; }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(() => setSwReady(true));
     }
+  }, []);
+
+  // Native bridge ready event
+  useEffect(() => {
+    const cleanup = onNativeMessage((data) => {
+      if (data.type === 'MARS_NATIVE_READY') setNativeReady(true);
+    });
+    return cleanup;
   }, []);
 
   // ── Alarm dismissed event ───────────────────────────────────────
@@ -129,6 +140,8 @@ export function useMars() {
     isOnline,
     isOffline: !isOnline,
     swReady,
+    nativeReady,
+    isNative: isNative(),
     lastDismissed,
 
     // Permissions

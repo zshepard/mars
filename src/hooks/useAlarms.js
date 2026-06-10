@@ -6,6 +6,14 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useLocalCollection } from './useLocalStorage';
+import {
+  isNative,
+  marsScheduleAlarm as bridgeScheduleAlarm,
+  marsCancelAlarm  as bridgeCancelAlarm,
+  marsOpenUrl,
+  onNativeMessage,
+  signalWebReady,
+} from '../marsBridge';
 
 const GUEST_ID = 'mars-local-user';
 
@@ -36,12 +44,21 @@ async function swPostMessage(msg) {
   }
 }
 
+// ── Public scheduling helpers — auto-route: native bridge OR SW ──
 export function scheduleAlarm({ alarm_id, fire_at, payload }) {
-  swPostMessage({ type: 'SCHEDULE_ALARM', data: { alarm_id, fire_at, payload } });
+  if (isNative()) {
+    bridgeScheduleAlarm({ alarm_id, fire_at, payload });
+  } else {
+    swPostMessage({ type: 'SCHEDULE_ALARM', data: { alarm_id, fire_at, payload } });
+  }
 }
 
 export function cancelAlarm(alarm_id) {
-  swPostMessage({ type: 'CANCEL_ALARM', data: { alarm_id } });
+  if (isNative()) {
+    bridgeCancelAlarm(alarm_id);
+  } else {
+    swPostMessage({ type: 'CANCEL_ALARM', data: { alarm_id } });
+  }
 }
 
 export function useAlarms(uid) {
@@ -50,14 +67,102 @@ export function useAlarms(uid) {
   const [alarms, setAlarms]   = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ── BUG FIX #2: Use a ref to always hold the latest alarms array
-  // so updateAlarm never reads stale state from a closure capture.
+  // Always hold the latest alarms array so updateAlarm never reads stale state
   const alarmsRef = useRef(alarms);
   useEffect(() => { alarmsRef.current = alarms; }, [alarms]);
 
-  // ── BUG FIX #3: Track whether guest alarms have been registered
-  // to prevent re-registering on every render of local.items.
+  // Track whether guest alarms have been registered to prevent re-registering
   const guestRegistered = useRef(false);
+
+  // ── Signal native bridge that web is ready ─────────────────────
+  useEffect(() => {
+    signalWebReady();
+  }, []);
+
+  // ── Listen for events coming down from native AlarmRingActivity ─
+  useEffect(() => {
+    const cleanup = onNativeMessage((data) => {
+      switch (data.type) {
+
+        case 'MARS_NATIVE_READY':
+          console.log('[MARS] Native alarm module ready — rescheduling all alarms');
+          // Re-schedule all enabled alarms into native AlarmManager
+          alarmsRef.current.filter((a) => a.enabled !== false).forEach((alarm) => {
+            scheduleAlarm({
+              alarm_id: alarm.id,
+              fire_at:  nextFireTime(alarm.time, alarm.days),
+              payload:  alarm,
+            });
+          });
+          break;
+
+        case 'MARS_ALARM_FIRED':
+          // Native alarm fired while app was closed, now re-opened
+          window.dispatchEvent(new CustomEvent('mars:alarm-fired', {
+            detail: { alarm_id: data.id, payload: data.payload },
+          }));
+          break;
+
+        case 'MARS_ALARM_DISMISSED':
+          // User dismissed alarm on native AlarmRingActivity
+          handleNativeDismiss(data.id, data.openUrl);
+          break;
+
+        case 'MARS_ALARM_SNOOZED':
+          window.dispatchEvent(new CustomEvent('mars:alarm-snoozed', {
+            detail: { alarm_id: data.id, minutes: data.minutes },
+          }));
+          break;
+
+        case 'MARS_ALARM_SCHEDULED_ACK':
+          console.log('[MARS] Native confirmed alarm scheduled:', data.id);
+          break;
+
+        case 'MARS_ALARM_SCHEDULE_FALLBACK':
+          // Native scheduling failed — fall back to SW
+          console.warn('[MARS] Native scheduling failed, falling back to SW:', data.id);
+          const alarm = alarmsRef.current.find((a) => a.id === data.id);
+          if (alarm) {
+            swPostMessage({
+              type: 'SCHEDULE_ALARM',
+              data: {
+                alarm_id: alarm.id,
+                fire_at:  nextFireTime(alarm.time, alarm.days),
+                payload:  alarm,
+              },
+            });
+          }
+          break;
+
+        case 'MARS_APP_FOREGROUND':
+          // App came back to foreground — nothing to do here, Firestore listener handles it
+          break;
+
+        default:
+          break;
+      }
+    });
+    return cleanup;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle dismiss from native AlarmRingActivity
+  async function handleNativeDismiss(alarm_id, openUrl) {
+    // Write lastFiredAt to localStorage immediately (missed-alarm guard)
+    localStorage.setItem(`mars-alarm-lastfired-${alarm_id}`, new Date().toISOString());
+    window.dispatchEvent(new CustomEvent('mars:alarm-dismissed', {
+      detail: { alarm_id, openUrl, native: true },
+    }));
+    // Open the alarm's URL
+    if (openUrl) marsOpenUrl(openUrl);
+    // Sync to Firestore
+    if (uid) {
+      await updateDoc(doc(db, 'users', uid, 'alarms', alarm_id), {
+        lastFiredAt:     serverTimestamp(),
+        lastDismissedAt: serverTimestamp(),
+      }).catch(console.warn);
+    }
+  }
 
   // ── Firestore mode (logged in) ──────────────────────────────────
   useEffect(() => {
@@ -65,7 +170,6 @@ export function useAlarms(uid) {
       setLoading(false);
       return;
     }
-    // Wait for a real uid before touching Firestore
     if (!uid || uid === GUEST_ID) return;
     guestRegistered.current = false;
 
@@ -83,7 +187,7 @@ export function useAlarms(uid) {
           const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
           setAlarms(data);
           setLoading(false);
-          // Re-register all enabled alarms with SW on every snapshot
+          // Re-register all enabled alarms on every snapshot
           data.forEach((alarm) => {
             if (alarm.enabled !== false) {
               scheduleAlarm({
@@ -97,7 +201,6 @@ export function useAlarms(uid) {
           });
         },
         (err) => {
-          // permission-denied fires briefly after reload while auth token restores
           console.warn('[useAlarms] onSnapshot error (attempt', attempt, '):', err.code);
           if (err.code === 'permission-denied' && attempt < 6) {
             const delay = Math.min(800 * Math.pow(2, attempt), 20000);
@@ -116,8 +219,7 @@ export function useAlarms(uid) {
     };
   }, [uid, isGuest]);
 
-  // ── BUG FIX #3: Re-register guest alarms only ONCE on mount,
-  // not on every render triggered by local.items reference change.
+  // ── Guest mode — register alarms once on mount ─────────────────
   useEffect(() => {
     if (!isGuest) return;
     if (guestRegistered.current) return;
@@ -134,8 +236,7 @@ export function useAlarms(uid) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest]);
 
-  // ── BUG FIX #4: Missed alarm detection — check for alarms that
-  // fired while the device was off and show a "missed alarm" banner.
+  // ── Missed alarm detection — guest mode ────────────────────────
   useEffect(() => {
     const checkMissed = (items) => {
       const now = Date.now();
@@ -143,7 +244,6 @@ export function useAlarms(uid) {
         if (alarm.enabled === false) return false;
         const expectedMs = lastExpectedFireTime(alarm.time, alarm.days);
         if (!expectedMs || expectedMs >= now || (now - expectedMs) >= 30 * 60 * 1000) return false;
-        // For guest users, lastFiredAt may be stored in localStorage by useAlarmTimer
         const storedFired = localStorage.getItem(`mars-alarm-lastfired-${alarm.id}`);
         const fireMs = storedFired
           ? new Date(storedFired).getTime()
@@ -160,6 +260,7 @@ export function useAlarms(uid) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest]);
 
+  // ── Missed alarm detection — signed-in mode ────────────────────
   useEffect(() => {
     if (isGuest) return;
     if (alarms.length === 0) return;
@@ -168,8 +269,6 @@ export function useAlarms(uid) {
       if (alarm.enabled === false) return false;
       const expectedMs = lastExpectedFireTime(alarm.time, alarm.days);
       if (!expectedMs || expectedMs >= now || (now - expectedMs) >= 30 * 60 * 1000) return false;
-      // Check Firestore lastFiredAt first; fall back to localStorage (written immediately
-      // on dismiss/snooze, before the Firestore write completes).
       const firestoreMs = alarm.lastFiredAt
         ? (alarm.lastFiredAt.toMillis ? alarm.lastFiredAt.toMillis() : new Date(alarm.lastFiredAt).getTime())
         : 0;
@@ -186,14 +285,15 @@ export function useAlarms(uid) {
   const currentAlarms = isGuest ? local.items : alarms;
   const isLoading = isGuest ? local.loading : loading;
 
-  // ── BUG FIX #5: addAlarm Firestore path — include alarm id in payload
+  // ── CRUD ───────────────────────────────────────────────────────
+
   const addAlarm = useCallback(async (alarmData) => {
     if (isGuest) {
       const newItem = local.addItem({ ...alarmData, enabled: true });
       scheduleAlarm({
         alarm_id: newItem.id,
         fire_at:  nextFireTime(alarmData.time, alarmData.days),
-        payload:  { ...newItem },   // ← full item including id
+        payload:  { ...newItem },
       });
       return newItem;
     }
@@ -205,20 +305,18 @@ export function useAlarms(uid) {
     scheduleAlarm({
       alarm_id: ref.id,
       fire_at:  nextFireTime(alarmData.time, alarmData.days),
-      payload:  { ...alarmData, id: ref.id, enabled: true }, // ← include id
+      payload:  { ...alarmData, id: ref.id, enabled: true },
     });
     return ref;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, isGuest]);
 
-  // ── BUG FIX #2: updateAlarm uses alarmsRef.current (always fresh)
   const updateAlarm = useCallback(async (id, data) => {
     if (isGuest) {
       local.updateItem(id, data);
       if (data.enabled === false) {
         cancelAlarm(id);
       } else {
-        // Read from local.items directly (not from closure)
         const alarm = local.items.find((a) => a.id === id);
         const merged = { ...alarm, ...data };
         scheduleAlarm({
@@ -236,7 +334,6 @@ export function useAlarms(uid) {
     if (data.enabled === false) {
       cancelAlarm(id);
     } else {
-      // ← Use alarmsRef.current — always the latest, never stale
       const alarm = alarmsRef.current.find((a) => a.id === id);
       const merged = { ...alarm, ...data };
       scheduleAlarm({
@@ -259,7 +356,14 @@ export function useAlarms(uid) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, isGuest]);
 
-  return { alarms: currentAlarms, loading: isLoading, addAlarm, updateAlarm, deleteAlarm };
+  return {
+    alarms: currentAlarms,
+    loading: isLoading,
+    addAlarm,
+    updateAlarm,
+    deleteAlarm,
+    isNative: isNative(),
+  };
 }
 
 // ── Calculate NEXT fire time from HH:MM string ─────────────────
@@ -284,8 +388,7 @@ export function nextFireTime(timeStr, days = []) {
   return fallback.toISOString();
 }
 
-// ── BUG FIX #4: Calculate the LAST expected fire time ──────────
-// Used to detect missed alarms (fired while device was off).
+// ── Calculate the LAST expected fire time (for missed-alarm check) ─
 function lastExpectedFireTime(timeStr, days = []) {
   if (!timeStr) return null;
   const [hours, minutes] = timeStr.split(':').map(Number);

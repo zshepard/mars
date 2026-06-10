@@ -1,4 +1,5 @@
 // src/serviceWorkerRegistration.js
+import { isNative } from './marsBridge';
 const SW_URL = `${process.env.PUBLIC_URL}/sw.js`;
 
 export function register(config = {}) {
@@ -95,6 +96,18 @@ export function queueHomeAction(action) {
 }
 
 export function scheduleLink({ link_id, time, days, url, device }) {
+  if (isNative()) {
+    // In native WebView: schedule via native AlarmManager through the bridge
+    if (window.ReactNativeWebView?.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type:    'MARS_SCHEDULE_ALARM',
+        id:      `link-${link_id}`,
+        time:    nextLinkFireTime(time, days),
+        payload: { link_id, url, device, type: 'scheduled-link' },
+      }));
+    }
+    return;
+  }
   navigator.serviceWorker?.controller?.postMessage({
     type: 'SCHEDULE_LINK',
     data: { link_id, time, days, url, device },
@@ -102,8 +115,37 @@ export function scheduleLink({ link_id, time, days, url, device }) {
 }
 
 export function cancelLink(link_id) {
+  if (isNative()) {
+    if (window.ReactNativeWebView?.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'MARS_CANCEL_ALARM',
+        id:   `link-${link_id}`,
+      }));
+    }
+    return;
+  }
   navigator.serviceWorker?.controller?.postMessage({
     type: 'CANCEL_LINK',
     data: { link_id },
   });
+}
+
+// Helper: calculate next fire time for a scheduled link
+function nextLinkFireTime(timeStr, days = []) {
+  if (!timeStr) return new Date(Date.now() + 60000).toISOString();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const now = new Date();
+  for (let offset = 0; offset <= 7; offset++) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + offset);
+    candidate.setHours(hours, minutes, 0, 0);
+    if (candidate <= now) continue;
+    if (!days || days.length === 0) return candidate.toISOString();
+    const dayName = DAY_NAMES[candidate.getDay()];
+    if (days.includes(dayName)) return candidate.toISOString();
+  }
+  const fallback = new Date(now.getTime() + 86400000);
+  fallback.setHours(hours, minutes, 0, 0);
+  return fallback.toISOString();
 }
