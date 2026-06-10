@@ -3,13 +3,15 @@
   display: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .fab {
     display: flex;
     align-items: center;
     justify-content: center;
     position: fixed;
-    bottom: 78px;          /* sits just above the bottom nav bar */
+    bottom: 80px;          /* sits just above the bottom nav bar (62px) + 18px gap */
     right: 20px;
     width: 56px;
     height: 56px;

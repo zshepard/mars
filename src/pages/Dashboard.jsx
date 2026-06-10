@@ -205,7 +205,7 @@ export default function Dashboard() {
               <div className="dc-sub">{nextAlarm.label || 'Alarm'}</div>
               <div className="dc-countdown">{timeUntil(nextAlarm.time, nextAlarm.days)}</div>
               {nextAlarm.openUrl && (
-                <div className="dc-link"><i className="ti ti-external-link" /> {nextAlarm.openUrl}</div>
+                <div className="dc-link"><i className="ti ti-external-link" /><span>{nextAlarm.openUrl}</span></div>
               )}
             </>
           ) : (

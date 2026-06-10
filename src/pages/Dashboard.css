@@ -4,6 +4,9 @@
   max-width: 960px;
   margin: 0 auto;
   width: 100%;
+  /* Prevent any child from causing horizontal page scroll */
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* ── Greeting ─────────────────────────────────────────────────── */
@@ -56,8 +59,12 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+  /* Prevent grid children from overflowing */
+  min-width: 0;
 }
-@media (max-width: 620px) {
+@media (max-width: 620px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .dash-grid { grid-template-columns: 1fr; }
   .dash-page { padding: 20px 16px 32px; }
   .dash-greeting h1 { font-size: 1.6rem; }
@@ -72,6 +79,9 @@
   text-decoration: none;
   color: inherit;
   display: block;
+  /* Prevent card content from overflowing its bounds */
+  overflow: hidden;
+  min-width: 0;
   transition:
     border-color var(--transition),
     transform var(--transition),
@@ -122,10 +132,19 @@
   gap: 5px;
   font-size: 11px;
   color: var(--green);
+  /* Prevent long URLs from causing horizontal overflow */
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+/* The URL text itself — truncate with ellipsis */
+.dc-link span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
+.dc-link i { flex-shrink: 0; }
 
 /* ── Room pills ───────────────────────────────────────────────── */
 .room-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
@@ -162,7 +181,9 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-@media (max-width: 480px) {
+@media (max-width: 480px),
+       (display-mode: standalone),
+       (display-mode: fullscreen) {
   .qa-grid { grid-template-columns: repeat(2, 1fr); }
 }
 .qa-btn {

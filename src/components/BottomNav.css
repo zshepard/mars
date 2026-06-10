@@ -16,10 +16,15 @@
     left: 0;
     right: 0;
     height: 62px;
-    background: var(--bg);
+    /* Always solid — never transparent even when a background pack is active */
+    background: var(--bg) !important;
+    background-image: none !important;
     border-top: 1px solid var(--border);
     z-index: 180;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Subtle glass blur as a visual enhancement without transparency */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
