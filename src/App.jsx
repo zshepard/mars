@@ -100,6 +100,28 @@ function AppShell() {
   const onTouchStart = useCallback(() => {}, []);
   const onTouchEnd   = useCallback(() => {}, []);
 
+  // ── Global URL opener ──────────────────────────────────────────────────────
+  // Listens for mars:open-url dispatched by serviceWorkerRegistration.js when
+  // a scheduled link notification is tapped or the SW fires a link open.
+  // This runs regardless of which page is currently active.
+  useEffect(() => {
+    function handleOpenUrl(e) {
+      const { url } = e.detail || {};
+      if (!url) return;
+      // In Android TWA, use the bridge so the host opens the URL natively
+      if (window.ReactNativeWebView) {
+        try {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MARS_OPEN_URL', url }));
+          return;
+        } catch {}
+      }
+      // Web: open in a new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    window.addEventListener('mars:open-url', handleOpenUrl);
+    return () => window.removeEventListener('mars:open-url', handleOpenUrl);
+  }, []);
+
   return (
     <div
       className={`app-shell${isMobile ? ' app-shell--mobile' : ''}`}

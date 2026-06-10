@@ -319,9 +319,13 @@ self.addEventListener('notificationclick', (event) => {
       const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       if (link_url) {
         if (clients.length > 0) {
-          await clients[0].focus();
-          clients[0].postMessage({ type: 'MARS_OPEN_URL', url: link_url, device: open_device });
+          // Focus the app, then let the global mars:open-url listener in App.jsx open the URL.
+          // Use a short delay so the page is active before the message arrives.
+          const client = await clients[0].focus();
+          await new Promise(r => setTimeout(r, 300));
+          client.postMessage({ type: 'MARS_OPEN_URL', url: link_url, device: open_device });
         } else {
+          // App is fully closed — open the URL directly
           await self.clients.openWindow(link_url);
         }
       } else if (clients.length > 0) {
@@ -368,16 +372,28 @@ async function handleAlarmDismiss({ alarm_id, open_url, open_device, routine_ste
 
   // Open URL on this device if open_device is 'phone' or 'all'
   if (open_url && (open_device === 'phone' || open_device === 'all')) {
+    // Determine if the URL is same-origin (MARS internal) or external
+    let isSameOrigin = false;
+    try { isSameOrigin = new URL(open_url).origin === self.location.origin; } catch {}
+
     if (clients.length > 0) {
-      clients[0].navigate(open_url);
-      clients[0].focus();
+      const client = await clients[0].focus();
+      if (isSameOrigin) {
+        // Internal page — navigate the existing tab
+        try { await client.navigate(open_url); } catch { client.postMessage({ type: 'MARS_OPEN_URL', url: open_url }); }
+      } else {
+        // External URL — post to global listener in App.jsx which opens a new tab
+        // (client.navigate() throws on cross-origin)
+        client.postMessage({ type: 'MARS_OPEN_URL', url: open_url, device: open_device });
+      }
     } else {
+      // App is fully closed — open the URL directly
       await self.clients.openWindow(open_url);
     }
   } else if (!open_url) {
-    // No URL — just focus the MARS app
+    // No URL — just focus or open the MARS app
     if (clients.length > 0) {
-      clients[0].focus();
+      await clients[0].focus();
     } else {
       await self.clients.openWindow('/');
     }
