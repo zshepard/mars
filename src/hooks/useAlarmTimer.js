@@ -206,11 +206,30 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
       }, delayMs);
     }
 
-    // NOTE: We do NOT call reg.showNotification() here.
-    // The service worker's scheduleAlarmTimer already fires a notification
-    // when the alarm time arrives (even in background). Calling it again
-    // from the page would produce a duplicate notification every time.
-    // The in-page UI overlay (firingAlarm state) handles the foreground case.
+    // If the page is hidden (background tab, minimized TWA, screen off) the
+    // in-page overlay won't be seen. Fire a SW notification so the user gets
+    // an audible + visible alert even when the app isn't in view.
+    if (document.visibilityState === 'hidden') {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        navigator.serviceWorker?.ready.then((reg) => {
+          const snoozeMins = parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10);
+          reg.showNotification(alarm.label || 'MARS Alarm', {
+            body: alarm.openUrl ? `Tap to open: ${alarm.openUrl}` : 'Time to start your routine.',
+            icon: '/icons/icon-192.png',
+            badge: '/icons/badge-72.png',
+            vibrate: [300, 100, 300, 100, 500],
+            requireInteraction: !alarm.autoDismiss,
+            tag: alarm.id,
+            renotify: true,
+            data: { alarm_id: alarm.id, ...alarm },
+            actions: [
+              { action: 'dismiss', title: '\u2713 Dismiss' },
+              { action: 'snooze',  title: `\u23f1 Snooze ${snoozeMins}m` },
+            ],
+          }).catch(() => {});
+        }).catch(() => {});
+      }
+    }
   }, [clearAutoDismiss, dismissAlarm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Main interval: every second ────────────────────────────────────
@@ -247,6 +266,43 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
   useEffect(() => {
     return () => clearAutoDismiss();
   }, [clearAutoDismiss]);
+
+  // ── Visibility change: when user brings the app back into view ────
+  // If a SW notification fired while the page was hidden and the user taps
+  // the notification to open the app, close the notification and show the
+  // in-page overlay so they can dismiss/snooze from the UI.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Check if any alarm is currently in its fire window (within 2 min of fire time)
+      const now = new Date();
+      for (const alarm of alarms) {
+        if (!shouldFireNow(alarm)) {
+          // Also check if we're within 2 minutes past the fire time
+          const [h, m] = (alarm.time || '').split(':').map(Number);
+          if (isNaN(h) || isNaN(m)) continue;
+          const fireMs = new Date(now);
+          fireMs.setHours(h, m, 0, 0);
+          const diff = now.getTime() - fireMs.getTime();
+          if (diff < 0 || diff > 2 * 60 * 1000) continue;
+          if (!alarm.enabled) continue;
+        }
+        // Close SW notification and show in-page overlay
+        navigator.serviceWorker?.ready.then((reg) => {
+          reg.getNotifications({ tag: alarm.id }).then((notifs) => {
+            if (notifs.length > 0) {
+              notifs.forEach((n) => n.close());
+              // Only fire in-page overlay if nothing is already firing
+              setFiringAlarm((current) => current ?? alarm);
+            }
+          }).catch(() => {});
+        }).catch(() => {});
+        break; // only handle one at a time
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [alarms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { firingAlarm, dismissAlarm, snoozeAlarm, countdowns };
 }
