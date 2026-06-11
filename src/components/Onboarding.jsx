@@ -15,6 +15,7 @@ function isOnboardingDone(uid) {
   return localStorage.getItem(`${STORAGE_KEY}-${uid}`) === '1';
 }
 
+// Always call with the resolved uid (use resolveUid below, never user.uid directly)
 function markOnboardingDone(uid) {
   if (!uid) return;
   localStorage.setItem(`${STORAGE_KEY}-${uid}`, '1');
@@ -42,6 +43,13 @@ export default function Onboarding() {
   const [selectedPack, setSelectedPack] = useState('default-dark');
   const [saving, setSaving]     = useState(false);
 
+  // Resolved uid — always use this, never user.uid directly
+  // Prevents markOnboardingDone(undefined) when auth hasn't fully resolved
+  const resolveUid = () => {
+    if (!user) return null;
+    return user.isGuest ? GUEST_ID : (user.uid || null);
+  };
+
   // Decide whether to show onboarding — only once per account
   useEffect(() => {
     if (!user) return;
@@ -51,26 +59,25 @@ export default function Onboarding() {
     if (isOnboardingDone(uid)) return;
     // For signed-in users also check Firestore in case they completed on another device
     if (!user.isGuest && user.uid) {
+      let cancelled = false;
       try {
         const { db } = require('../firebase/config');
         const { doc, getDoc } = require('firebase/firestore');
         getDoc(doc(db, 'users', user.uid)).then((snap) => {
+          if (cancelled) return;
           if (snap.exists() && snap.data()?.onboardingComplete) {
             // Mark locally so we don't check Firestore again
             localStorage.setItem(`${STORAGE_KEY}-${user.uid}`, '1');
             return;
           }
-          const t = setTimeout(() => setVisible(true), 600);
-          return () => clearTimeout(t);
+          setTimeout(() => { if (!cancelled) setVisible(true); }, 600);
         }).catch(() => {
-          // Firestore unavailable — fall back to localStorage result
-          const t = setTimeout(() => setVisible(true), 600);
-          return () => clearTimeout(t);
+          if (!cancelled) setTimeout(() => setVisible(true), 600);
         });
       } catch (e) {
-        const t = setTimeout(() => setVisible(true), 600);
-        return () => clearTimeout(t);
+        if (!cancelled) setTimeout(() => setVisible(true), 600);
       }
+      return () => { cancelled = true; };
     } else {
       // Guest — localStorage only
       const t = setTimeout(() => setVisible(true), 600);
@@ -124,7 +131,7 @@ export default function Onboarding() {
   }
 
   function handleCreateAlarm() {
-    markOnboardingDone(user.uid);
+    markOnboardingDone(resolveUid());
     setVisible(false);
     navigate('/alarms?new=alarm');
   }
@@ -134,7 +141,7 @@ export default function Onboarding() {
   }
 
   function handleCreateLink() {
-    markOnboardingDone(user.uid);
+    markOnboardingDone(resolveUid());
     setVisible(false);
     navigate('/alarms?new=link');
   }
@@ -144,13 +151,13 @@ export default function Onboarding() {
   }
 
   function handleCreateRoutine() {
-    markOnboardingDone(user.uid);
+    markOnboardingDone(resolveUid());
     setVisible(false);
     navigate('/alarms?new=routine');
   }
 
   function handleSkipRoutine() {
-    markOnboardingDone(user.uid);
+    markOnboardingDone(resolveUid());
     setVisible(false);
     navigate('/');
   }
