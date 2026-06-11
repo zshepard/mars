@@ -11,13 +11,21 @@ const STORAGE_KEY = 'mars-onboarding-complete';
 const GUEST_ID    = 'guest';
 
 function isOnboardingDone(uid) {
-  if (!uid) return true;
+  if (!uid) return true; // no user yet — don't show
   return localStorage.getItem(`${STORAGE_KEY}-${uid}`) === '1';
 }
 
 function markOnboardingDone(uid) {
   if (!uid) return;
   localStorage.setItem(`${STORAGE_KEY}-${uid}`, '1');
+  // Also write to Firestore for signed-in users so it persists across devices
+  if (uid !== GUEST_ID) {
+    try {
+      const { db } = require('../firebase');
+      const { doc, setDoc, serverTimestamp } = require('firebase/firestore');
+      setDoc(doc(db, 'users', uid), { onboardingComplete: true, onboardingAt: serverTimestamp() }, { merge: true });
+    } catch (e) { /* non-critical */ }
+  }
 }
 
 // Flatten all packs for the theme picker
@@ -34,13 +42,40 @@ export default function Onboarding() {
   const [selectedPack, setSelectedPack] = useState('default-dark');
   const [saving, setSaving]     = useState(false);
 
-  // Decide whether to show onboarding
+  // Decide whether to show onboarding — only once per account
   useEffect(() => {
     if (!user) return;
-    if (isOnboardingDone(user.uid)) return;
-    // Small delay so the main app renders first
-    const t = setTimeout(() => setVisible(true), 600);
-    return () => clearTimeout(t);
+    const uid = user.isGuest ? GUEST_ID : user.uid;
+    if (!uid) return;
+    // Check localStorage first (instant)
+    if (isOnboardingDone(uid)) return;
+    // For signed-in users also check Firestore in case they completed on another device
+    if (!user.isGuest && user.uid) {
+      try {
+        const { db } = require('../firebase');
+        const { doc, getDoc } = require('firebase/firestore');
+        getDoc(doc(db, 'users', user.uid)).then((snap) => {
+          if (snap.exists() && snap.data()?.onboardingComplete) {
+            // Mark locally so we don't check Firestore again
+            localStorage.setItem(`${STORAGE_KEY}-${user.uid}`, '1');
+            return;
+          }
+          const t = setTimeout(() => setVisible(true), 600);
+          return () => clearTimeout(t);
+        }).catch(() => {
+          // Firestore unavailable — fall back to localStorage result
+          const t = setTimeout(() => setVisible(true), 600);
+          return () => clearTimeout(t);
+        });
+      } catch (e) {
+        const t = setTimeout(() => setVisible(true), 600);
+        return () => clearTimeout(t);
+      }
+    } else {
+      // Guest — localStorage only
+      const t = setTimeout(() => setVisible(true), 600);
+      return () => clearTimeout(t);
+    }
   }, [user]);
 
   // Apply selected theme pack preview in real-time
