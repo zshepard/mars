@@ -16,18 +16,16 @@ export default function Settings() {
     storagePermission, requestPersistentStorage,
     isOnline,
   } = useMars();
-  const navigate                                            = useNavigate();
+  const navigate = useNavigate();
 
-  // ── Synced preferences (Firestore + localStorage mirror) ────────────────────
+  // ── Synced preferences ──────────────────────────────────────────
   const { prefs, updatePref } = usePreferences(user);
-
-  // Derived convenience values
   const voiceEnabled   = prefs.heyMars;
   const use24hr        = prefs.clockFormat === '24';
   const snoozeDuration = prefs.snoozeDuration;
   const currentPack    = getPackById(prefs.backgroundPack || 'default-dark');
 
-  const handleVoiceEnabled = (val) => updatePref('heyMars', val);
+  const handleVoiceEnabled   = (val) => updatePref('heyMars', val);
   const handleSnoozeDuration = (val) => {
     const n = Math.max(1, Math.min(60, parseInt(val, 10) || 5));
     updatePref('snoozeDuration', n);
@@ -36,22 +34,19 @@ export default function Settings() {
 
   const [voiceWakeWord, setVoiceWakeWord] = useState('Hey MARS');
   const [defaultDevice, setDefaultDevice] = useState('phone');
-  // eslint-disable-next-line no-unused-vars
-  const [theme, setTheme] = useState('dark');
 
-  // ── Account editing state ──────────────────────────────────────────────────
+  // ── Account editing state ───────────────────────────────────────
   const [editingUsername, setEditingUsername] = useState(false);
-  const [usernameInput, setUsernameInput]     = useState('');
-  const [usernameStatus, setUsernameStatus]   = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [usernameInput,   setUsernameInput]   = useState('');
+  const [usernameStatus,  setUsernameStatus]  = useState(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [currentPw, setCurrentPw]               = useState('');
-  const [newPw, setNewPw]                       = useState('');
-  const [confirmPw, setConfirmPw]               = useState('');
-  const [pwStatus, setPwStatus]                 = useState(null); // null | 'saving' | 'saved' | 'error' | string
-  const [resetStatus, setResetStatus]           = useState(null);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw,     setNewPw]     = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwStatus,  setPwStatus]  = useState(null);
+  const [resetStatus, setResetStatus] = useState(null);
 
-  // Does the current user have a password linked?
   const hasPassword = user?.providerData?.some?.((p) => p.providerId === 'password') ?? false;
 
   const handleSaveUsername = async () => {
@@ -107,9 +102,9 @@ export default function Settings() {
     <div className="settings-page page-enter">
       <h1 className="page-title">Settings</h1>
 
-      {/* Account */}
+      {/* ── Account Details ─────────────────────────────────────── */}
       <div className="settings-section">
-        <div className="settings-section-title">Account</div>
+        <div className="settings-section-title">Account Details</div>
 
         {/* Profile row */}
         <div className="settings-row">
@@ -127,8 +122,8 @@ export default function Settings() {
         <div className="settings-row" style={{flexDirection:'column',alignItems:'stretch',gap:8}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div>
-              <div className="settings-val"><i className="ti ti-user" style={{marginRight:6}} />Username</div>
-              <div className="settings-sub">Change your display name</div>
+              <div className="settings-val"><i className="ti ti-user" style={{marginRight:6}} />Display Name</div>
+              <div className="settings-sub">How MARS greets you on My Day</div>
             </div>
             {!editingUsername && (
               <button className="btn btn-sm" onClick={() => { setUsernameInput(user?.displayName || ''); setEditingUsername(true); setUsernameStatus(null); }}>
@@ -165,7 +160,7 @@ export default function Settings() {
               <div className="settings-sub">
                 {hasPassword
                   ? 'Update your account password'
-                  : 'Add a password to your Google account so you can also sign in with email'}
+                  : 'Add a password so you can also sign in with email'}
               </div>
             </div>
             {!showPasswordForm && (
@@ -177,28 +172,13 @@ export default function Settings() {
           {showPasswordForm && (
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {hasPassword && (
-                <input
-                  className="settings-input"
-                  type="password"
-                  value={currentPw}
-                  onChange={(e) => setCurrentPw(e.target.value)}
-                  placeholder="Current password"
-                />
+                <input className="settings-input" type="password" value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)} placeholder="Current password" />
               )}
-              <input
-                className="settings-input"
-                type="password"
-                value={newPw}
-                onChange={(e) => setNewPw(e.target.value)}
-                placeholder="New password (min 6 characters)"
-              />
-              <input
-                className="settings-input"
-                type="password"
-                value={confirmPw}
-                onChange={(e) => setConfirmPw(e.target.value)}
-                placeholder="Confirm new password"
-              />
+              <input className="settings-input" type="password" value={newPw}
+                onChange={(e) => setNewPw(e.target.value)} placeholder="New password (min 6 characters)" />
+              <input className="settings-input" type="password" value={confirmPw}
+                onChange={(e) => setConfirmPw(e.target.value)} placeholder="Confirm new password" />
               {pwStatus && pwStatus !== 'saving' && pwStatus !== 'saved' && (
                 <span className="badge badge-red">{pwStatus}</span>
               )}
@@ -213,30 +193,103 @@ export default function Settings() {
           )}
         </div>
 
-        {/* Forgot / reset password */}
+        {/* Reset password */}
         <div className="settings-row">
           <div>
             <div className="settings-val"><i className="ti ti-mail" style={{marginRight:6}} />Reset Password by Email</div>
-            <div className="settings-sub">Send a password reset link to {user?.email}</div>
+            <div className="settings-sub">Send a reset link to {user?.email}</div>
           </div>
-          <button
-            className="btn btn-sm"
-            onClick={handlePasswordReset}
-            disabled={resetStatus === 'sending'}
-          >
+          <button className="btn btn-sm" onClick={handlePasswordReset} disabled={resetStatus === 'sending'}>
             {resetStatus === 'sending' ? 'Sending…' : 'Send Link'}
           </button>
         </div>
         {resetStatus === 'sent'  && <div className="settings-banner banner-green"><i className="ti ti-check" /> Reset link sent to {user?.email}</div>}
         {resetStatus === 'error' && <div className="settings-banner banner-red">Failed to send — try again</div>}
-
       </div>
 
-      {/* Permissions */}
+      {/* ── Customization ───────────────────────────────────────── */}
+      <div className="settings-section">
+        <div className="settings-section-title">Customization</div>
+
+        {/* Appearance — clock format */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-clock" style={{marginRight:6}} />Clock Format</div>
+            <div className="settings-sub">{use24hr ? '24-hour (18:45)' : '12-hour (06:45 PM)'}</div>
+          </div>
+          <div className="clock-format-toggle">
+            <button className={`clock-fmt-btn ${!use24hr ? 'active' : ''}`}
+              onClick={() => { if (use24hr) toggleClockFormat(); }}>12h</button>
+            <button className={`clock-fmt-btn ${use24hr ? 'active' : ''}`}
+              onClick={() => { if (!use24hr) toggleClockFormat(); }}>24h</button>
+          </div>
+        </div>
+
+        {/* Background pack */}
+        <div className="settings-row settings-row--clickable" onClick={() => navigate('/backgrounds')}>
+          <div>
+            <div className="settings-val"><i className="ti ti-palette" style={{marginRight:6}} />Background Pack</div>
+            <div className="settings-sub">{currentPack?.label || 'Default Dark'}</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:40,height:20,borderRadius:4,background:currentPack?.preview||'var(--bg2)',border:'1px solid var(--border)',flexShrink:0}} />
+            <i className="ti ti-chevron-right" style={{color:'var(--text3)'}} />
+          </div>
+        </div>
+
+        {/* Voice recognition */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-microphone" style={{marginRight:6}} />Voice Recognition</div>
+            <div className="settings-sub">Works offline using on-device speech API</div>
+          </div>
+          <button className={`toggle ${voiceEnabled ? 'on' : ''}`}
+            onClick={() => handleVoiceEnabled(!voiceEnabled)} />
+        </div>
+
+        {/* Wake word */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val">Wake Word</div>
+            <div className="settings-sub">Phrase that activates MARS</div>
+          </div>
+          <input className="settings-input" value={voiceWakeWord}
+            onChange={(e) => setVoiceWakeWord(e.target.value)} />
+        </div>
+
+        {/* Snooze duration */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-alarm" style={{marginRight:6}} />Snooze Duration</div>
+            <div className="settings-sub">How long to wait before re-firing a snoozed alarm</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <input type="number" className="settings-input" style={{width:60,textAlign:'center'}}
+              value={snoozeDuration} min={1} max={60}
+              onChange={(e) => handleSnoozeDuration(e.target.value)} />
+            <span style={{fontSize:12,color:'var(--text2)',whiteSpace:'nowrap'}}>min</span>
+          </div>
+        </div>
+
+        {/* Default link device */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-link" style={{marginRight:6}} />Default Link Device</div>
+            <div className="settings-sub">Where alarm URLs open by default</div>
+          </div>
+          <select className="settings-select" value={defaultDevice}
+            onChange={(e) => setDefaultDevice(e.target.value)}>
+            <option value="phone">Phone</option>
+            <option value="computer">Computer</option>
+            <option value="all">All devices</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── App Permissions ─────────────────────────────────────── */}
       <div className="settings-section">
         <div className="settings-section-title">App Permissions</div>
 
-        {/* Notifications */}
         <div className="settings-row">
           <div>
             <div className="settings-val"><i className="ti ti-bell" style={{marginRight:6}} />Push Notifications</div>
@@ -250,7 +303,6 @@ export default function Settings() {
           }
         </div>
 
-        {/* Microphone */}
         <div className="settings-row">
           <div>
             <div className="settings-val"><i className="ti ti-microphone" style={{marginRight:6}} />Microphone</div>
@@ -266,7 +318,6 @@ export default function Settings() {
           }
         </div>
 
-        {/* Wake Lock */}
         {wakeLockSupported && (
           <div className="settings-row">
             <div>
@@ -280,7 +331,6 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Persistent Storage */}
         <div className="settings-row">
           <div>
             <div className="settings-val"><i className="ti ti-database" style={{marginRight:6}} />Persistent Storage</div>
@@ -297,124 +347,21 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Voice */}
-      <div className="settings-section">
-        <div className="settings-section-title">Voice Commands</div>
-        <div className="settings-row">
-          <div>
-            <div className="settings-val">Voice recognition</div>
-            <div className="settings-sub">Works offline using on-device speech API</div>
-          </div>
-          <button className={`toggle ${voiceEnabled ? 'on' : ''}`}
-            onClick={() => handleVoiceEnabled(!voiceEnabled)} />
-        </div>
-        <div className="settings-row">
-          <div>
-            <div className="settings-val">Wake word</div>
-            <div className="settings-sub">Phrase that activates MARS</div>
-          </div>
-          <input className="settings-input" value={voiceWakeWord}
-            onChange={(e) => setVoiceWakeWord(e.target.value)} />
-        </div>
-      </div>
-
-      {/* Alarm Behavior */}
-      <div className="settings-section">
-        <div className="settings-section-title">Alarm Behavior</div>
-        <div className="settings-row">
-          <div>
-            <div className="settings-val">Snooze duration</div>
-            <div className="settings-sub">How long to wait before re-firing a snoozed alarm</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="number"
-              className="settings-input"
-              style={{ width: 60, textAlign: 'center' }}
-              value={snoozeDuration}
-              min={1}
-              max={60}
-              onChange={(e) => handleSnoozeDuration(e.target.value)}
-            />
-            <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>min</span>
-          </div>
-        </div>
-      </div>
-
-      {/* URL / Device */}
-      <div className="settings-section">
-        <div className="settings-section-title">URL & Device</div>
-        <div className="settings-row">
-          <div>
-            <div className="settings-val">Default link open device</div>
-            <div className="settings-sub">Where alarm URLs open by default</div>
-          </div>
-          <select className="settings-select" value={defaultDevice}
-            onChange={(e) => setDefaultDevice(e.target.value)}>
-            <option value="phone">Phone</option>
-            <option value="computer">Computer</option>
-            <option value="all">All devices</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Appearance */}
-      <div className="settings-section">
-        <div className="settings-section-title">Appearance</div>
-
-        {/* Clock format toggle */}
-        <div className="settings-row">
-          <div>
-            <div className="settings-val">Clock format</div>
-            <div className="settings-sub">{use24hr ? '24-hour (18:45)' : '12-hour (06:45 PM)'}</div>
-          </div>
-          <div className="clock-format-toggle">
-            <button
-              className={`clock-fmt-btn ${!use24hr ? 'active' : ''}`}
-              onClick={() => { if (use24hr) toggleClockFormat(); }}
-            >12h</button>
-            <button
-              className={`clock-fmt-btn ${use24hr ? 'active' : ''}`}
-              onClick={() => { if (!use24hr) toggleClockFormat(); }}
-            >24h</button>
-          </div>
-        </div>
-
-        {/* Background pack */}
-        <div className="settings-row settings-row--clickable" onClick={() => navigate('/backgrounds')}>
-          <div>
-            <div className="settings-val">Background Pack</div>
-            <div className="settings-sub">{currentPack?.label || 'Default Dark'}</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div
-              style={{
-                width: 40,
-                height: 20,
-                borderRadius: 4,
-                background: currentPack?.preview || 'var(--bg2)',
-                border: '1px solid var(--border)',
-                flexShrink: 0,
-              }}
-            />
-            <i className="ti ti-chevron-right" style={{ color: 'var(--text3)' }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Features Coming Soon */}
+      {/* ── Features Coming Soon ─────────────────────────────────── */}
       <div className="settings-section">
         <div className="settings-section-title">Features Coming Soon</div>
+
         <div className="settings-row settings-coming-soon-row">
           <div className="settings-row-left">
             <div className="coming-soon-icon"><i className="ti ti-home" /></div>
             <div>
               <div className="settings-val">Home Control</div>
-              <div className="settings-sub">Smart home device integration & room management</div>
+              <div className="settings-sub">Smart home device integration &amp; room management</div>
             </div>
           </div>
           <span className="badge badge-amber">Soon</span>
         </div>
+
         <div className="settings-row settings-coming-soon-row">
           <div className="settings-row-left">
             <div className="coming-soon-icon"><i className="ti ti-heart-rate" /></div>
@@ -425,19 +372,31 @@ export default function Settings() {
           </div>
           <span className="badge badge-amber">Soon</span>
         </div>
+
         <div className="settings-row settings-coming-soon-row">
           <div className="settings-row-left">
             <div className="coming-soon-icon"><i className="ti ti-sparkles" /></div>
             <div>
               <div className="settings-val">AI Assistant</div>
-              <div className="settings-sub">On-device AI for routines, suggestions & automation</div>
+              <div className="settings-sub">On-device AI for routines, suggestions &amp; automation</div>
+            </div>
+          </div>
+          <span className="badge badge-amber">Soon</span>
+        </div>
+
+        <div className="settings-row settings-coming-soon-row">
+          <div className="settings-row-left">
+            <div className="coming-soon-icon"><i className="ti ti-device-tv" /></div>
+            <div>
+              <div className="settings-val">Multi-Device Sync</div>
+              <div className="settings-sub">Alarms and routines synced across all your devices</div>
             </div>
           </div>
           <span className="badge badge-amber">Soon</span>
         </div>
       </div>
 
-      {/* Platforms */}
+      {/* ── Platforms ───────────────────────────────────────────── */}
       <div className="settings-section">
         <div className="settings-section-title">Platforms</div>
         <div className="settings-row">
@@ -472,7 +431,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* System status */}
+      {/* ── System ──────────────────────────────────────────────── */}
       <div className="settings-section">
         <div className="settings-section-title">System</div>
         <div className="settings-row">
@@ -487,7 +446,7 @@ export default function Settings() {
         </div>
         <div className="settings-row">
           <div className="settings-val">App version</div>
-          <span className="settings-sub">v1.3.3</span>
+          <span className="settings-sub">v1.4.0</span>
         </div>
       </div>
     </div>

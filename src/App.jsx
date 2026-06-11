@@ -8,7 +8,7 @@ import Sidebar                                         from './components/Sideba
 import BottomNav                                       from './components/BottomNav';
 import FAB                                             from './components/FAB';
 import Login                                           from './pages/Login';
-import Dashboard                                       from './pages/Dashboard';
+import MyDay                                           from './pages/Dashboard';
 import Alarms                                          from './pages/Alarms';
 import Voice                                           from './pages/Voice';
 import Platforms                                       from './pages/Platforms';
@@ -17,8 +17,11 @@ import BackgroundPacks                                 from './pages/BackgroundP
 import { getPackById }                                 from './data/backgroundPacks';
 import { usePreferences }                              from './hooks/usePreferences';
 import { useAuth }                                     from './hooks/useAuth';
+import { useAlarms }                                   from './hooks/useAlarms';
+import { useRoutines }                                 from './hooks/useRoutines';
 import PullToRefresh                                   from './components/PullToRefresh';
 import RoutinePlayer                                   from './components/RoutinePlayer';
+import Onboarding                                      from './components/Onboarding';
 import './styles/global.css';
 import './App.css';
 
@@ -70,6 +73,8 @@ function AppShell() {
   // across devices without requiring the Settings or BackgroundPacks page to be open.
   const { user } = useAuth();
   usePreferences(user); // side-effect only — fires mirrorToLocal on every Firestore update
+  const { alarms }   = useAlarms(user?.uid);
+  const { routines } = useRoutines(user?.uid);
 
   // Restore saved background pack on every app load
   useEffect(() => {
@@ -137,12 +142,12 @@ function AppShell() {
       <div className="app-body" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
         {/* Sidebar — hidden on mobile/TWA via CSS, BottomNav takes over */}
         {!isMobile && (
-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} alarms={alarms} routines={routines} />
         )}
 
         <main className="app-main app-main--mobile-padded">
           <Routes>
-            <Route path="/"          element={<Dashboard />}   />
+            <Route path="/"          element={<MyDay />}        />
             <Route path="/alarms"    element={<Alarms />}      />
             <Route path="/links"     element={<Navigate to="/alarms" replace />} />
             <Route path="/routines"  element={<Navigate to="/alarms" replace />} />
@@ -162,11 +167,13 @@ function AppShell() {
       {isMobile && <PullToRefresh />}
 
       {/* Mobile/TWA: bottom nav bar + FAB */}
-      {isMobile && <BottomNav />}
+      {isMobile && <BottomNav alarms={alarms} routines={routines} />}
       {isMobile && <FAB />}
 
       {/* Global routine player overlay — activated by mars:start-routine event */}
       <RoutinePlayer />
+      {/* Onboarding overlay — shown once to new users and guests */}
+      <Onboarding />
     </div>
   );
 }
