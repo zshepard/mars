@@ -271,7 +271,6 @@
   color: var(--text);
   font-size: 13px;
   outline: none;
-  box-sizing: border-box;
 }
 .search-input:focus { border-color: var(--green); }
 .search-input::placeholder { color: var(--text3); }

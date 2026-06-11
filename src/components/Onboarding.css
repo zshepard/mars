@@ -96,7 +96,6 @@
   color: var(--text, #fff);
   outline: none;
   transition: border-color 0.2s;
-  box-sizing: border-box;
 }
 
 .ob-input:focus {
@@ -116,7 +115,6 @@
   max-height: 220px;
   overflow-y: auto;
   padding: 0.25rem;
-  box-sizing: border-box;
 }
 
 .ob-theme-swatch {

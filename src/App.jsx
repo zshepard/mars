@@ -22,6 +22,7 @@ import { useRoutines }                                 from './hooks/useRoutines
 import PullToRefresh                                   from './components/PullToRefresh';
 import RoutinePlayer                                   from './components/RoutinePlayer';
 import Onboarding                                      from './components/Onboarding';
+import ErrorBoundary from './components/ErrorBoundary';
 import './styles/global.css';
 import './App.css';
 
@@ -180,20 +181,22 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <AppShell />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

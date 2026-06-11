@@ -5,6 +5,7 @@
 //  Works even when browser notification permission is denied.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { msUntilNextFire as msUntilNextFireUtil, formatCountdown } from '../utils/timeUtils';
 
 // Opens a URL safely in both browser and Android WebView contexts.
 // window.open() is silently blocked inside WebViews — use the native bridge instead.
@@ -52,42 +53,10 @@ function shouldFireNow(alarm) {
   return days.includes(DAY_NAMES[now.getDay()]);
 }
 
-// Returns milliseconds until the next fire time for an alarm
+// Wraps shared util: accepts an alarm object, extracts time+days
 function msUntilNextFire(alarm) {
   if (!alarm.enabled) return null;
-  const now = new Date();
-  const [h, m] = (alarm.time || '').split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return null;
-
-  const days = alarm.days || [];
-  const todayIdx = now.getDay();
-
-  for (let offset = 0; offset < 8; offset++) {
-    const dayIdx = (todayIdx + offset) % 7;
-    const dayName = DAY_NAMES[dayIdx];
-    if (days.length > 0 && !days.includes(dayName)) continue;
-
-    const candidate = new Date(now);
-    candidate.setDate(candidate.getDate() + offset);
-    candidate.setHours(h, m, 0, 0);
-
-    if (candidate.getTime() > now.getTime()) {
-      return candidate.getTime() - now.getTime();
-    }
-  }
-  return null;
-}
-
-// Format ms into "Xh Ym" or "Xm Ys" countdown string
-function formatCountdown(ms) {
-  if (ms === null || ms < 0) return null;
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+  return msUntilNextFireUtil(alarm.time, alarm.days || []);
 }
 
 // Optional `onAlarmFired(alarmId)` callback — called on dismiss or snooze so the

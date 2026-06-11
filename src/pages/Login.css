@@ -148,7 +148,6 @@
   color: #fff;
   font-size: 0.9rem;
   outline: none;
-  box-sizing: border-box;
   transition:
     border-color var(--transition),
     background var(--transition),

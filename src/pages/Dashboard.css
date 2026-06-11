@@ -5,8 +5,6 @@
   max-width: 760px;
   margin: 0 auto;
   width: 100%;
-  overflow-x: hidden;
-  box-sizing: border-box;
 }
 
 /* ── Greeting ─────────────────────────────────────────────────── */
@@ -209,17 +207,27 @@
 .missed-dismiss:hover { opacity: 1; }
 
 /* ── Sync status message ──────────────────────────────────────── */
-.qa-sync-msg {
-  margin-top: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+/* qa-sync-msg variants removed — dead code (DMAIC cleanup) */
+
+/* ── Loading skeleton ─────────────────────────────────────────────── */
+@keyframes mars-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
-.qa-sync-msg--ok      { color: var(--green);  background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.2); }
-.qa-sync-msg--error   { color: #e63946;       background: rgba(230,57,70,0.08);  border: 1px solid rgba(230,57,70,0.2); }
-.qa-sync-msg--syncing { color: var(--text2);  background: var(--bg3);            border: 1px solid var(--border); }
+.myday-skeleton-box,
+.myday-skeleton-line {
+  background: linear-gradient(
+    90deg,
+    var(--bg3) 25%,
+    rgba(255,255,255,0.06) 50%,
+    var(--bg3) 75%
+  );
+  background-size: 200% 100%;
+  animation: mars-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+.myday-skeleton-row { cursor: default; pointer-events: none; }
+.myday-skeleton-row:hover { background: transparent; }
 
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 620px),

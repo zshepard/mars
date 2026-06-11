@@ -21,7 +21,7 @@ function markOnboardingDone(uid) {
   // Also write to Firestore for signed-in users so it persists across devices
   if (uid !== GUEST_ID) {
     try {
-      const { db } = require('../firebase');
+      const { db } = require('../firebase/config');
       const { doc, setDoc, serverTimestamp } = require('firebase/firestore');
       setDoc(doc(db, 'users', uid), { onboardingComplete: true, onboardingAt: serverTimestamp() }, { merge: true });
     } catch (e) { /* non-critical */ }
@@ -52,7 +52,7 @@ export default function Onboarding() {
     // For signed-in users also check Firestore in case they completed on another device
     if (!user.isGuest && user.uid) {
       try {
-        const { db } = require('../firebase');
+        const { db } = require('../firebase/config');
         const { doc, getDoc } = require('firebase/firestore');
         getDoc(doc(db, 'users', user.uid)).then((snap) => {
           if (snap.exists() && snap.data()?.onboardingComplete) {

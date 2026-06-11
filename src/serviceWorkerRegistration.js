@@ -7,8 +7,6 @@ export function register(config = {}) {
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(SW_URL).then((registration) => {
-      console.log('[MARS] SW registered');
-
       registration.onupdatefound = () => {
         const installing = registration.installing;
         if (!installing) return;
@@ -35,12 +33,12 @@ export function register(config = {}) {
             registration.periodicSync.register('mars-alarm-check', {
               minInterval: 15 * 60 * 1000, // 15 minutes
             }).then(() => {
-              console.log('[MARS] Periodic alarm check registered (15 min interval)');
+              // Periodic alarm check registered
             }).catch((e) => {
               console.warn('[MARS] Could not register periodic alarm check:', e);
             });
           } else {
-            console.log('[MARS] Periodic background sync not granted (state:', status.state, ')');
+            // Periodic background sync not granted — will rely on SW fetch events
           }
         }).catch(() => {
           // permissions.query may not support periodic-background-sync on all browsers

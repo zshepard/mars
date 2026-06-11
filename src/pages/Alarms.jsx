@@ -10,6 +10,7 @@ import { useSwipe }          from '../hooks/useSwipe';
 import { usePreferences }    from '../hooks/usePreferences';
 import SwipeItem             from '../components/SwipeItem';
 import './Alarms.css';
+import { msUntilNextFire, formatCountdown } from '../utils/timeUtils';
 
 // ── Format a HH:MM string according to the user's clock format preference ──
 function formatAlarmTime(timeStr, use24hr) {
@@ -107,36 +108,7 @@ function previewSound(soundId) {
   setTimeout(() => { audio.pause(); audio.currentTime = 0; }, 4000);
 }
 
-function msUntilNextFire(timeStr, days) {
-  if (!timeStr) return null;
-  const [h, m] = timeStr.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return null;
-  const now = new Date();
-  const candidate = new Date(now);
-  candidate.setHours(h, m, 0, 0);
-  if (candidate <= now) candidate.setDate(candidate.getDate() + 1);
-  if (days && days.length > 0) {
-    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    for (let i = 0; i < 8; i++) {
-      const d = new Date(candidate);
-      d.setDate(d.getDate() + i);
-      if (days.includes(DAY_NAMES[d.getDay()])) return d - now;
-    }
-    return null;
-  }
-  return candidate - now;
-}
-
-function formatCountdown(ms) {
-  if (ms == null || ms < 0) return null;
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
+// msUntilNextFire and formatCountdown imported from ../utils/timeUtils
 
 /* ─── Alarm Form ─────────────────────────────────────────────────── */
 function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {

@@ -85,7 +85,6 @@ export function useAlarms(uid) {
       switch (data.type) {
 
         case 'MARS_NATIVE_READY':
-          console.log('[MARS] Native alarm module ready — rescheduling all alarms');
           // Re-schedule all enabled alarms into native AlarmManager
           alarmsRef.current.filter((a) => a.enabled !== false).forEach((alarm) => {
             scheduleAlarm({
@@ -115,7 +114,7 @@ export function useAlarms(uid) {
           break;
 
         case 'MARS_ALARM_SCHEDULED_ACK':
-          console.log('[MARS] Native confirmed alarm scheduled:', data.id);
+          // Native confirmed alarm scheduled — no-op
           break;
 
         case 'MARS_ALARM_SCHEDULE_FALLBACK':

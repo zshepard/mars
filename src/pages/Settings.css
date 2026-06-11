@@ -91,7 +91,6 @@
 .settings-input:focus { border-color: var(--green); }
 .settings-input.settings-input--full {
   width: 100%;
-  box-sizing: border-box;
 }
 .settings-select {
   background: var(--bg3);

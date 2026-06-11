@@ -338,7 +338,6 @@
   font-size: 14px;
   color: var(--text);
   outline: none;
-  box-sizing: border-box;
   transition: border-color var(--transition);
 }
 .modal-input:focus { border-color: var(--green); }
