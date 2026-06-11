@@ -47,7 +47,7 @@ export default function Sidebar({ open, onClose, alarms = [], routines = [] }) {
   const NAV = [
     { to: '/',         icon: myDayIcon,          label: 'My Day'         },
     { to: '/alarms',   icon: 'ti-alarm',          label: 'Alarms & Links' },
-    { to: '/voice',    icon: 'ti-speakerphone',   label: 'Voice'          },
+    { to: '/voice',    icon: 'ti-microphone',     label: 'Voice'          },
     { to: '/settings', icon: 'ti-settings',       label: 'Settings'       },
   ];
 
