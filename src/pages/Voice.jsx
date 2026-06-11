@@ -71,6 +71,9 @@ export default function Voice() {
   }, [voice]);
 
   const wake = useWakeWord({ onWakeWord, pauseMs: 8000 });
+  const commandWindowPct = wake.commandWindowMs > 0
+    ? Math.round((wake.commandWindowMs / 8000) * 100)
+    : 0;
 
   // Group commands by category for the Commands tab
   const grouped = useMemo(() => {
@@ -90,14 +93,14 @@ export default function Voice() {
 
   // ── Status text ─────────────────────────────────────────────────
   const statusText = () => {
-    if (!voice.supported)                  return 'Not supported in this browser';
-    if (wake.dead)                         return 'Wake listener stopped — tap badge to restart';
-    if (wake.detected)                     return '✨ Hey MARS detected — speak your command...';
-    if (voice.listening && wake.detected)  return 'Listening for command...';
-    if (voice.listening)                   return 'Listening...';
-    if (voice.continuous)                  return 'Always listening — say your command';
-    if (wake.enabled && wake.active)       return 'Say "Hey MARS" to activate...';
-    if (wake.enabled && !wake.active)      return 'Wake listener starting...';
+    if (!voice.supported)                              return 'Not supported in this browser';
+    if (wake.dead && wake.deadReason === 'mic-denied') return 'Microphone blocked — grant access in Settings';
+    if (wake.dead)                                     return 'Wake listener stopped — tap badge to restart';
+    if (wake.commandWindowMs > 0)                      return `Speak your command… ${Math.ceil(wake.commandWindowMs / 1000)}s`;
+    if (voice.listening)                               return 'Listening...';
+    if (voice.continuous)                              return 'Always listening — say your command';
+    if (wake.enabled && wake.active)                   return `Say "${localStorage.getItem('mars-wake-phrase') || 'Hey MARS'}" to activate…`;
+    if (wake.enabled && !wake.active)                  return 'Wake listener starting...';
     return 'Tap to speak';
   };
 
@@ -133,7 +136,12 @@ export default function Voice() {
               <i className="ti ti-sparkles" /> Wake word!
             </span>
           )}
-          {wake.dead && (
+          {wake.dead && wake.deadReason === 'mic-denied' && (
+            <span className="badge badge-red" title="Microphone access is blocked">
+              <i className="ti ti-microphone-off" /> Mic blocked — check permissions
+            </span>
+          )}
+          {wake.dead && wake.deadReason !== 'mic-denied' && (
             <span
               className="badge badge-red"
               style={{ cursor: 'pointer' }}
@@ -169,6 +177,13 @@ export default function Voice() {
             <i className={`ti ${voice.listening || wake.detected ? 'ti-microphone' : 'ti-microphone-off'}`} />
           </button>
         </div>
+
+        {/* Command window countdown bar */}
+        {commandWindowPct > 0 && (
+          <div className="command-window-bar" title={`Command window: ${Math.ceil(wake.commandWindowMs / 1000)}s remaining`}>
+            <div className="command-window-fill" style={{ width: `${commandWindowPct}%` }} />
+          </div>
+        )}
 
         {/* Waveform */}
         <WaveformBars active={voice.listening} wakeDetected={wake.detected} />

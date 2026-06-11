@@ -451,3 +451,19 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.6; }
 }
+
+/* ── Command window countdown bar ────────────────────────────────── */
+.command-window-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 4px 0 8px;
+}
+.command-window-fill {
+  height: 100%;
+  background: #f5a623;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}

@@ -1,5 +1,5 @@
 // src/pages/Settings.jsx
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth }         from '../hooks/useAuth';
 import { useMars }         from '../hooks/useMars';
@@ -35,19 +35,39 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const { prefs, updatePref } = usePreferences(user);
-  const voiceEnabled   = prefs.heyMars;
-  const use24hr        = prefs.clockFormat === '24';
-  const snoozeDuration = prefs.snoozeDuration;
-  const currentPack    = getPackById(prefs.backgroundPack || 'default-dark');
+  const voiceEnabled    = prefs.heyMars;
+  const use24hr         = prefs.clockFormat === '24';
+  const snoozeDuration  = prefs.snoozeDuration;
+  const wakePhrase      = prefs.wakePhrase      ?? 'hey mars';
+  const wakeConfirmTone = prefs.wakeConfirmTone ?? true;
+  const currentPack     = getPackById(prefs.backgroundPack || 'default-dark');
 
-  const handleVoiceEnabled   = (val) => updatePref('heyMars', val);
-  const handleSnoozeDuration = (val) => {
+  const handleVoiceEnabled    = (val) => updatePref('heyMars', val);
+  const handleWakeConfirmTone = (val) => updatePref('wakeConfirmTone', val);
+  const handleSnoozeDuration  = (val) => {
     const n = Math.max(1, Math.min(60, parseInt(val, 10) || 5));
     updatePref('snoozeDuration', n);
   };
   const toggleClockFormat = () => updatePref('clockFormat', use24hr ? '12' : '24');
 
-  const [voiceWakeWord, setVoiceWakeWord] = useState('Hey MARS');
+  // Wake phrase editing — debounced so we don't spam Firestore on every keystroke
+  const [wakePhraseInput, setWakePhraseInput] = useState('');
+  const [wakePhraseEditing, setWakePhraseEditing] = useState(false);
+  const wakePhraseDebounce = useRef(null);
+  const handleWakePhraseChange = (val) => {
+    setWakePhraseInput(val);
+    if (wakePhraseDebounce.current) clearTimeout(wakePhraseDebounce.current);
+    wakePhraseDebounce.current = setTimeout(() => {
+      const canonical = val.toLowerCase().trim();
+      if (canonical) updatePref('wakePhrase', canonical);
+    }, 800);
+  };
+  const handleWakePhraseBlur = () => {
+    setWakePhraseEditing(false);
+    const canonical = wakePhraseInput.toLowerCase().trim();
+    if (canonical && canonical !== wakePhrase) updatePref('wakePhrase', canonical);
+  };
+
   const [defaultDevice, setDefaultDevice] = useState('phone');
 
   // Account editing
@@ -273,26 +293,66 @@ export default function Settings() {
         </div>
       </SettingsSection>
 
-      {/* ── Voice Commands ──────────────────────────────────────── */}
+      {/* ── Voice Commands ─────────────────────────────────────────────── */}
       <SettingsSection icon="ti-microphone" title="Voice Commands">
 
+        {/* Hey MARS on/off — gated on mic permission */}
         <div className="settings-row">
           <div>
-            <div className="settings-val"><i className="ti ti-microphone" style={{marginRight:6}} />Voice Recognition</div>
-            <div className="settings-sub">Works offline using on-device speech API</div>
+            <div className="settings-val"><i className="ti ti-ear" style={{marginRight:6}} />Hey MARS Wake Word</div>
+            <div className="settings-sub">
+              {micPermission === 'denied'
+                ? <span style={{color:'var(--red)'}}>Microphone blocked — grant access in App Permissions below</span>
+                : 'Say your wake phrase hands-free to activate MARS'}
+            </div>
           </div>
-          <button className={`toggle ${voiceEnabled ? 'on' : ''}`}
-            onClick={() => handleVoiceEnabled(!voiceEnabled)} />
+          <button
+            className={`toggle ${voiceEnabled ? 'on' : ''}`}
+            onClick={() => {
+              if (micPermission === 'denied') return;
+              handleVoiceEnabled(!voiceEnabled);
+            }}
+            disabled={micPermission === 'denied'}
+            title={micPermission === 'denied' ? 'Microphone access required' : undefined}
+          />
         </div>
 
+        {/* Wake phrase — now persisted via usePreferences */}
         <div className="settings-row">
           <div>
-            <div className="settings-val">Wake Word</div>
-            <div className="settings-sub">Phrase that activates MARS</div>
+            <div className="settings-val">Wake Phrase</div>
+            <div className="settings-sub">Phrase that activates MARS (e.g. “Hey MARS”)</div>
           </div>
-          <input className="settings-input" value={voiceWakeWord}
-            onChange={(e) => setVoiceWakeWord(e.target.value)} />
+          <input
+            className="settings-input"
+            value={wakePhraseEditing ? wakePhraseInput : wakePhrase}
+            onFocus={() => { setWakePhraseEditing(true); setWakePhraseInput(wakePhrase); }}
+            onChange={(e) => handleWakePhraseChange(e.target.value)}
+            onBlur={handleWakePhraseBlur}
+            placeholder="hey mars"
+            style={{ textTransform: 'lowercase' }}
+          />
         </div>
+
+        {/* Confirmation tone */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-val"><i className="ti ti-bell-ringing" style={{marginRight:6}} />Confirmation Tone</div>
+            <div className="settings-sub">Play a chime when wake phrase is detected</div>
+          </div>
+          <button className={`toggle ${wakeConfirmTone ? 'on' : ''}`}
+            onClick={() => handleWakeConfirmTone(!wakeConfirmTone)} />
+        </div>
+
+        {/* Voice page shortcut */}
+        <div className="settings-row" style={{cursor:'pointer'}} onClick={() => navigate('/voice')}>
+          <div>
+            <div className="settings-val"><i className="ti ti-terminal" style={{marginRight:6}} />Voice Commands</div>
+            <div className="settings-sub">View all commands and command history</div>
+          </div>
+          <i className="ti ti-chevron-right" style={{color:'var(--text3)'}} />
+        </div>
+
       </SettingsSection>
 
       {/* ── App Permissions ─────────────────────────────────────── */}

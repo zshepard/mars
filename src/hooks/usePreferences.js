@@ -4,10 +4,12 @@
 // `preferences` map field. Falls back to localStorage for guests.
 //
 // Synced preferences:
-//   clockFormat    — '12' | '24'
-//   snoozeDuration — number (minutes, 1–60)
-//   heyMars        — boolean
-//   backgroundPack — string (pack id)
+//   clockFormat     — '12' | '24'
+//   snoozeDuration  — number (minutes, 1–60)
+//   heyMars         — boolean
+//   wakePhrase      — string (lowercase canonical, e.g. 'hey mars')
+//   wakeConfirmTone — boolean (play chime on wake detection)
+//   backgroundPack  — string (pack id)
 //
 // Usage:
 //   const { prefs, updatePref } = usePreferences(user);
@@ -31,6 +33,8 @@ const DEFAULTS = {
   clockFormat:    '12',
   snoozeDuration: 5,
   heyMars:        true,
+  wakePhrase:     'hey mars',   // custom wake phrase (lowercase canonical)
+  wakeConfirmTone: true,        // play a soft chime on wake detection
   backgroundPack: 'default-dark',
 };
 
@@ -38,10 +42,12 @@ const DEFAULTS = {
 function readLocalPrefs() {
   try {
     return {
-      clockFormat:    localStorage.getItem('mars-clock-24hr') === 'true' ? '24' : '12',
-      snoozeDuration: parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10),
-      heyMars:        localStorage.getItem('mars-hey-mars') !== 'false',
-      backgroundPack: localStorage.getItem('mars-background-pack') || 'default-dark',
+      clockFormat:     localStorage.getItem('mars-clock-24hr') === 'true' ? '24' : '12',
+      snoozeDuration:  parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10),
+      heyMars:         localStorage.getItem('mars-hey-mars') !== 'false',
+      wakePhrase:      localStorage.getItem('mars-wake-phrase') || 'hey mars',
+      wakeConfirmTone: localStorage.getItem('mars-wake-confirm-tone') !== 'false',
+      backgroundPack:  localStorage.getItem('mars-background-pack') || 'default-dark',
     };
   } catch {
     return { ...DEFAULTS };
@@ -63,6 +69,13 @@ function mirrorToLocal(key, value) {
       case 'heyMars':
         localStorage.setItem('mars-hey-mars', value ? 'true' : 'false');
         window.dispatchEvent(new CustomEvent('mars:hey-mars-toggle', { detail: value }));
+        break;
+      case 'wakePhrase':
+        localStorage.setItem('mars-wake-phrase', String(value).toLowerCase().trim());
+        window.dispatchEvent(new CustomEvent('mars:wake-phrase-changed', { detail: String(value).toLowerCase().trim() }));
+        break;
+      case 'wakeConfirmTone':
+        localStorage.setItem('mars-wake-confirm-tone', value ? 'true' : 'false');
         break;
       case 'backgroundPack':
         localStorage.setItem('mars-background-pack', value);

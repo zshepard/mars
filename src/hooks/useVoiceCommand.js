@@ -405,6 +405,61 @@ export const COMMAND_DEFS = [
       return { success: true, message: 'Switched to 12-hour clock' };
     },
   },
+
+  // ── Time & Date ─────────────────────────────────────────────────────────────
+  {
+    id: 'system-time',
+    label: 'What time is it?',
+    category: 'System',
+    keywords: ['time', 'what', 'clock'],
+    phrases: ['what time is it', 'what is the time', 'tell me the time', 'current time', 'time please'],
+    execute: () => {
+      const now = new Date();
+      const use24 = localStorage.getItem('mars-clock-24hr') === 'true';
+      const timeStr = use24
+        ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+        : now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+      return { success: true, message: `It\'s ${timeStr}` };
+    },
+  },
+  {
+    id: 'system-date',
+    label: 'What day / date is it?',
+    category: 'System',
+    keywords: ['date', 'day', 'today', 'what'],
+    phrases: ['what day is it', 'what is today', "what's today", 'what is the date', 'today\'s date', 'what day is today'],
+    execute: () => {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+      return { success: true, message: `Today is ${dateStr}` };
+    },
+  },
+
+  // ── Schedule ────────────────────────────────────────────────────────────────
+  {
+    id: 'schedule-today',
+    label: 'Read my schedule / My Day',
+    category: 'Navigation',
+    keywords: ['schedule', 'today', 'day', 'my', 'upcoming'],
+    phrases: ['read my schedule', 'what is on my schedule', "what's on my schedule", 'my day', 'show my day', 'upcoming alarms', 'what do i have today'],
+    execute: (_, { navigate }) => {
+      navigate('/');
+      return { success: true, message: 'Opening My Day' };
+    },
+  },
+
+  // ── Help ────────────────────────────────────────────────────────────────────
+  {
+    id: 'system-help',
+    label: 'Help / list commands',
+    category: 'System',
+    keywords: ['help', 'commands', 'what', 'can', 'do'],
+    phrases: ['help', 'what can you do', 'list commands', 'show commands', 'what commands are available', 'hey mars help'],
+    execute: (_, { navigate }) => {
+      navigate('/voice');
+      return { success: true, message: 'Opening Voice Commands — all commands listed here' };
+    },
+  },
 ];
 
 // ── Fuzzy command matcher (DMAIC v2) ─────────────────────────────────────────
