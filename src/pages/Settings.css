@@ -186,3 +186,72 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* ── Collapsible section button ──────────────────────────────── */
+.settings-section--collapsible {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.settings-section-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+  transition: background var(--t-fast);
+}
+.settings-section-btn:hover {
+  background: rgba(255,255,255,0.04);
+}
+.ssb-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 17px;
+  color: var(--green);
+}
+.ssb-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.ssb-chevron {
+  font-size: 16px;
+  color: var(--text3);
+  transition: transform var(--t-fast);
+  flex-shrink: 0;
+}
+.settings-section--collapsible.is-open .ssb-chevron {
+  transform: rotate(180deg);
+}
+.settings-section-body {
+  border-top: 1px solid var(--border);
+}
+.settings-section-body .settings-row {
+  border-bottom: 1px solid var(--border);
+}
+.settings-section-body .settings-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 620px) {
+  .settings-page { padding: 20px 16px 40px; }
+  .settings-section-btn { padding: 12px 14px; }
+  .settings-row { padding: 12px 14px; }
+}

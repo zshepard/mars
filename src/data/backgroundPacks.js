@@ -202,6 +202,252 @@ export const BACKGROUND_PACKS = [
       },
     ],
   },
+
+  /* ─── 2026 TRENDING PACKS ───────────────────────────────────────────── */
+  {
+    section: '2026 TRENDING',
+    packs: [
+      // 1. Anthracite & Mint
+      {
+        id: 'anthracite-mint',
+        label: 'Anthracite & Mint',
+        preview: 'linear-gradient(135deg, #1c1c1e 0%, #2a2a2e 50%, #00e5a0 100%)',
+        background: `
+          radial-gradient(ellipse at 70% 20%, rgba(0,229,160,0.12) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 80%, rgba(0,200,130,0.08) 0%, transparent 50%),
+          #1c1c1e`,
+        cssVars: {
+          '--green':     '#00e5a0',
+          '--green-dim': 'rgba(0,229,160,0.14)',
+          '--bg':        '#1c1c1e',
+          '--bg2':       '#242428',
+          '--bg3':       '#2e2e34',
+          '--border':    'rgba(0,229,160,0.18)',
+          '--border2':   'rgba(0,229,160,0.35)',
+          '--text':      '#e8f8f2',
+          '--text2':     '#90b0a4',
+          '--text3':     '#5a7a6e',
+          '--accent':    '#00e5a0',
+        },
+      },
+      // 2. Dracula
+      {
+        id: 'dracula',
+        label: 'Dracula',
+        preview: 'linear-gradient(135deg, #282a36 0%, #44475a 40%, #ff79c6 70%, #50fa7b 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(255,121,198,0.12) 0%, transparent 55%),
+          radial-gradient(ellipse at 25% 75%, rgba(80,250,123,0.08) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 80%, rgba(189,147,249,0.10) 0%, transparent 45%),
+          #282a36`,
+        cssVars: {
+          '--green':     '#50fa7b',
+          '--green-dim': 'rgba(80,250,123,0.14)',
+          '--bg':        '#282a36',
+          '--bg2':       '#313344',
+          '--bg3':       '#3d3f52',
+          '--border':    'rgba(68,71,90,0.8)',
+          '--border2':   'rgba(255,121,198,0.35)',
+          '--text':      '#f8f8f2',
+          '--text2':     '#bd93f9',
+          '--text3':     '#6272a4',
+          '--accent':    '#ff79c6',
+        },
+      },
+      // 3. Lava Core
+      {
+        id: 'lava-core',
+        label: 'Lava Core',
+        preview: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 40%, #ff4d4d 70%, #ff8c69 100%)',
+        background: `
+          radial-gradient(ellipse at 65% 25%, rgba(255,77,77,0.15) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 70%, rgba(255,140,105,0.10) 0%, transparent 50%),
+          repeating-linear-gradient(
+            45deg,
+            rgba(255,77,77,0.02) 0px, rgba(255,77,77,0.02) 1px,
+            transparent 1px, transparent 10px
+          ),
+          #1a1a1a`,
+        cssVars: {
+          '--green':     '#ff4d4d',
+          '--green-dim': 'rgba(255,77,77,0.14)',
+          '--bg':        '#1a1a1a',
+          '--bg2':       '#222222',
+          '--bg3':       '#2c2c2c',
+          '--border':    'rgba(255,77,77,0.20)',
+          '--border2':   'rgba(255,77,77,0.40)',
+          '--text':      '#fff0ee',
+          '--text2':     '#c49090',
+          '--text3':     '#8a5050',
+          '--accent':    '#ff4d4d',
+        },
+      },
+      // 4. Transformative Teal
+      {
+        id: 'transformative-teal',
+        label: 'Transformative Teal',
+        preview: 'linear-gradient(135deg, #0a1628 0%, #0d2137 40%, #00897b 70%, #1565c0 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(0,137,123,0.18) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 70%, rgba(21,101,192,0.15) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 80%, rgba(0,120,110,0.10) 0%, transparent 45%),
+          #0a1628`,
+        cssVars: {
+          '--green':     '#00bfa5',
+          '--green-dim': 'rgba(0,191,165,0.14)',
+          '--bg':        '#0a1628',
+          '--bg2':       '#0d1e35',
+          '--bg3':       '#112540',
+          '--border':    'rgba(0,137,123,0.22)',
+          '--border2':   'rgba(0,191,165,0.40)',
+          '--text':      '#e0f4f1',
+          '--text2':     '#80b8b2',
+          '--text3':     '#406e6a',
+          '--accent':    '#00bfa5',
+        },
+      },
+      // 5. Pistachio & Sage
+      {
+        id: 'pistachio-sage',
+        label: 'Pistachio & Sage',
+        preview: 'linear-gradient(135deg, #f5f0e8 0%, #e8ede0 50%, #93a87a 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(147,168,122,0.15) 0%, transparent 60%),
+          radial-gradient(ellipse at 20% 80%, rgba(120,145,95,0.10) 0%, transparent 55%),
+          #f5f0e8`,
+        cssVars: {
+          '--green':     '#5a7a40',
+          '--green-dim': 'rgba(90,122,64,0.12)',
+          '--bg':        '#f5f0e8',
+          '--bg2':       '#ede8dc',
+          '--bg3':       '#e0dbd0',
+          '--border':    'rgba(90,122,64,0.18)',
+          '--border2':   'rgba(90,122,64,0.35)',
+          '--text':      '#2a3020',
+          '--text2':     '#5a6a48',
+          '--text3':     '#8a9a78',
+          '--accent':    '#5a7a40',
+        },
+      },
+      // 6. Plum Noir
+      {
+        id: 'plum-noir',
+        label: 'Plum Noir',
+        preview: 'linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 40%, #7b2d8b 70%, #c084fc 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 30%, rgba(123,45,139,0.20) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 70%, rgba(192,132,252,0.10) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 80%, rgba(100,30,120,0.15) 0%, transparent 45%),
+          #1a0a2e`,
+        cssVars: {
+          '--green':     '#c084fc',
+          '--green-dim': 'rgba(192,132,252,0.14)',
+          '--bg':        '#1a0a2e',
+          '--bg2':       '#22103a',
+          '--bg3':       '#2c1848',
+          '--border':    'rgba(123,45,139,0.25)',
+          '--border2':   'rgba(192,132,252,0.40)',
+          '--text':      '#f0e8ff',
+          '--text2':     '#b090d0',
+          '--text3':     '#7050a0',
+          '--accent':    '#c084fc',
+        },
+      },
+      // 7. Digital Peach & Indigo
+      {
+        id: 'digital-peach-indigo',
+        label: 'Digital Peach & Indigo',
+        preview: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #f97316 70%, #fcd5b0 100%)',
+        background: `
+          radial-gradient(ellipse at 65% 25%, rgba(249,115,22,0.14) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 70%, rgba(49,46,129,0.90) 0%, transparent 60%),
+          radial-gradient(ellipse at 80% 80%, rgba(252,213,176,0.06) 0%, transparent 40%),
+          #1e1b4b`,
+        cssVars: {
+          '--green':     '#f97316',
+          '--green-dim': 'rgba(249,115,22,0.14)',
+          '--bg':        '#1e1b4b',
+          '--bg2':       '#262358',
+          '--bg3':       '#302c68',
+          '--border':    'rgba(249,115,22,0.20)',
+          '--border2':   'rgba(249,115,22,0.40)',
+          '--text':      '#fef3e8',
+          '--text2':     '#c4a080',
+          '--text3':     '#806050',
+          '--accent':    '#f97316',
+        },
+      },
+      // 8. Persimmon & Wasabi
+      {
+        id: 'persimmon-wasabi',
+        label: 'Persimmon & Wasabi',
+        preview: 'linear-gradient(135deg, #1a1200 0%, #2a1800 40%, #e85d04 65%, #a3b800 100%)',
+        background: `
+          radial-gradient(ellipse at 60% 25%, rgba(232,93,4,0.18) 0%, transparent 55%),
+          radial-gradient(ellipse at 25% 75%, rgba(163,184,0,0.14) 0%, transparent 50%),
+          #1a1200`,
+        cssVars: {
+          '--green':     '#a3b800',
+          '--green-dim': 'rgba(163,184,0,0.14)',
+          '--bg':        '#1a1200',
+          '--bg2':       '#221800',
+          '--bg3':       '#2c2000',
+          '--border':    'rgba(232,93,4,0.22)',
+          '--border2':   'rgba(163,184,0,0.38)',
+          '--text':      '#fff8e0',
+          '--text2':     '#c4a840',
+          '--text3':     '#8a7020',
+          '--accent':    '#e85d04',
+        },
+      },
+      // 9. Rebel Pink
+      {
+        id: 'rebel-pink',
+        label: 'Rebel Pink',
+        preview: 'linear-gradient(135deg, #f8f4f0 0%, #f0e8e4 50%, #e91e8c 100%)',
+        background: `
+          radial-gradient(ellipse at 70% 20%, rgba(233,30,140,0.12) 0%, transparent 55%),
+          radial-gradient(ellipse at 20% 80%, rgba(233,30,140,0.07) 0%, transparent 50%),
+          #f8f4f0`,
+        cssVars: {
+          '--green':     '#c2006e',
+          '--green-dim': 'rgba(194,0,110,0.12)',
+          '--bg':        '#f8f4f0',
+          '--bg2':       '#ede8e4',
+          '--bg3':       '#e0dbd6',
+          '--border':    'rgba(233,30,140,0.18)',
+          '--border2':   'rgba(233,30,140,0.38)',
+          '--text':      '#1a0010',
+          '--text2':     '#7a2050',
+          '--text3':     '#b06080',
+          '--accent':    '#e91e8c',
+        },
+      },
+      // 10. Cloud Dancer & Tech Violet
+      {
+        id: 'cloud-dancer-violet',
+        label: 'Cloud Dancer & Tech Violet',
+        preview: 'linear-gradient(135deg, #faf9f6 0%, #f0eef8 50%, #7c3aed 100%)',
+        background: `
+          radial-gradient(ellipse at 65% 25%, rgba(124,58,237,0.10) 0%, transparent 60%),
+          radial-gradient(ellipse at 20% 80%, rgba(124,58,237,0.06) 0%, transparent 55%),
+          #faf9f6`,
+        cssVars: {
+          '--green':     '#5b21b6',
+          '--green-dim': 'rgba(91,33,182,0.10)',
+          '--bg':        '#faf9f6',
+          '--bg2':       '#f0eef8',
+          '--bg3':       '#e4e0f0',
+          '--border':    'rgba(124,58,237,0.16)',
+          '--border2':   'rgba(124,58,237,0.32)',
+          '--text':      '#1a1030',
+          '--text2':     '#5040a0',
+          '--text3':     '#9080c0',
+          '--accent':    '#7c3aed',
+        },
+      },
+    ],
+  },
 ];
 
 /** Flat list of all packs for easy lookup by id */
