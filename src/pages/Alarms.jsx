@@ -1,5 +1,6 @@
 // src/pages/Alarms.jsx  — unified Alarms + Scheduled Links + Routines
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth }           from '../hooks/useAuth';
 import { useAlarms }         from '../hooks/useAlarms';
 import { useAlarmTimer }     from '../hooks/useAlarmTimer';
@@ -466,8 +467,25 @@ export default function Alarms() {
   });
 
   // ── Alarm add/edit state ──────────────────────────────────────────
+  const location = useLocation();
   const [showAlarmForm, setShowAlarmForm] = useState(false);
   const [alarmForm, setAlarmForm]         = useState(EMPTY_ALARM);
+
+  // Pre-fill alarm form from voice command navigation state
+  useEffect(() => {
+    const s = location.state;
+    if (!s) return;
+    if (s.prefillTime || s.prefillLabel) {
+      setAlarmForm(prev => ({
+        ...prev,
+        ...(s.prefillTime  ? { time:  s.prefillTime  } : {}),
+        ...(s.prefillLabel ? { label: s.prefillLabel } : {}),
+      }));
+      setShowAlarmForm(true);
+      // Clear state so back-navigation doesn't re-trigger
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
   const [alarmSaving, setAlarmSaving]     = useState(false);
   const [editAlarmId, setEditAlarmId]     = useState(null);
   const [editAlarmForm, setEditAlarmForm] = useState(null);

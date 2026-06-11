@@ -144,15 +144,32 @@ export const COMMAND_DEFS = [
     id: 'alarm-set',
     label: 'Set an alarm',
     category: 'Alarms',
-    keywords: ['set', 'create', 'new', 'wake', 'alarm'],
-    phrases: ['set alarm for 6 30 am', 'wake me at 7', 'create alarm 8 am', 'set alarm 5 30', 'new alarm at 6'],
+    keywords: ['set', 'create', 'new', 'wake', 'alarm', 'remind'],
+    phrases: [
+      // Original phrases
+      'set alarm for 6 30 am', 'wake me at 7', 'create alarm 8 am', 'set alarm 5 30', 'new alarm at 6',
+      // Alexa-style utterances
+      'set an alarm for 7 am',
+      'wake me up at 6 30',
+      'wake me up at 7',
+      'set a boxing alarm for 2 pm',
+      'set a work alarm for 8 am',
+      'set a morning alarm for 6',
+      'remind me at 9 am',
+      'set alarm for tomorrow at 7',
+      'create a new alarm for 5 30 am',
+    ],
     execute: (text, { navigate }) => {
       const time = extractTime(text);
-      if (time) {
-        navigate('/alarms', { state: { prefillTime: time } });
-        return { success: true, message: `Opening alarm creator for ${time}` };
-      }
-      navigate('/alarms');
+      // Extract optional alarm name: "set a {name} alarm for {time}"
+      const nameMatch = text.match(/set\s+a\s+([\w\s]+?)\s+alarm/i);
+      const alarmName = nameMatch ? nameMatch[1].trim() : null;
+      const state = {};
+      if (time)      state.prefillTime  = time;
+      if (alarmName) state.prefillLabel = alarmName;
+      navigate('/alarms', { state });
+      if (time && alarmName) return { success: true, message: `Opening alarm creator — ${alarmName} at ${time}` };
+      if (time)               return { success: true, message: `Opening alarm creator for ${time}` };
       return { success: true, message: 'Opening alarm creator' };
     },
   },
