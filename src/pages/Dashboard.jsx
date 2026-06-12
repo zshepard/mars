@@ -1,18 +1,20 @@
 // src/pages/Dashboard.jsx  (My Day)
 // Presents upcoming alarms, scheduled links, and routines in Settings-style rows.
-import { useState, useEffect } from 'react';
+// Clicking an item ACTIVATES it immediately:
+//   alarm   → plays alarm sound + shows dismiss overlay
+//   routine → fires mars:start-routine event → RoutinePlayer overlay
+//   link    → opens URL via marsOpenUrl (new tab / native Linking)
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth }           from '../hooks/useAuth';
 import { useAlarms }         from '../hooks/useAlarms';
 import { useRoutines }       from '../hooks/useRoutines';
 import { useScheduledLinks } from '../hooks/useScheduledLinks';
 import { useMars }           from '../hooks/useMars';
-import { Link, useNavigate } from 'react-router-dom';
-// Firestore imports reserved for future manual-sync feature
+import { useNavigate }       from 'react-router-dom';
+import { marsPlaySound, marsStopSound, marsOpenUrl } from '../marsBridge';
 import './Dashboard.css';
 import { nextFireDate, formatCountdown } from '../utils/timeUtils';
 
-// nextFireDate and formatCountdown (as formatDiff) imported from ../utils/timeUtils
-// Local alias so existing buildTimeline calls remain unchanged
 const formatDiff = formatCountdown;
 
 function getGreeting() {
@@ -35,6 +37,7 @@ function buildTimeline(alarms, routines, links) {
       type: 'alarm', id: a.id, time: a.time,
       label: a.label || 'Alarm', url: a.openUrl || null,
       fireDate, countdown: formatDiff(fireDate - now), days: a.days || [],
+      _raw: a,
     });
   });
 
@@ -45,6 +48,7 @@ function buildTimeline(alarms, routines, links) {
       type: 'routine', id: r.id, time: r.startTime || r.time,
       label: r.name || 'Routine', stepCount: (r.steps || []).length,
       fireDate, countdown: formatDiff(fireDate - now), days: r.days || [],
+      _raw: r,
     });
   });
 
@@ -55,6 +59,7 @@ function buildTimeline(alarms, routines, links) {
       type: 'link', id: l.id, time: l.time,
       label: l.label || 'Scheduled Link', url: l.url || null,
       fireDate, countdown: formatDiff(fireDate - now), days: l.days || [],
+      _raw: l,
     });
   });
 
@@ -64,10 +69,31 @@ function buildTimeline(alarms, routines, links) {
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 const TYPE_META = {
-  alarm:   { icon: 'ti-alarm',      label: 'Alarm',           route: '/alarms'   },
-  routine: { icon: 'ti-list-check', label: 'Routine',         route: '/alarms'   },
-  link:    { icon: 'ti-link',       label: 'Scheduled Link',  route: '/alarms'   },
+  alarm:   { icon: 'ti-alarm',      label: 'Alarm'          },
+  routine: { icon: 'ti-list-check', label: 'Routine'        },
+  link:    { icon: 'ti-link',       label: 'Scheduled Link' },
 };
+
+// ── Alarm fire overlay ────────────────────────────────────────────────────────
+function AlarmOverlay({ alarm, onDismiss, onSnooze }) {
+  return (
+    <div className="alarm-overlay" onClick={onDismiss}>
+      <div className="alarm-overlay-card" onClick={e => e.stopPropagation()}>
+        <div className="alarm-overlay-icon"><i className="ti ti-alarm" /></div>
+        <div className="alarm-overlay-label">{alarm.label || 'Alarm'}</div>
+        <div className="alarm-overlay-time">{alarm.time}</div>
+        <div className="alarm-overlay-actions">
+          <button className="btn btn-sm" onClick={onSnooze}>
+            <i className="ti ti-clock-snooze" /> Snooze
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={onDismiss}>
+            <i className="ti ti-check" /> Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
@@ -87,7 +113,59 @@ export default function Dashboard() {
     return () => window.removeEventListener('mars:missed-alarms', handler);
   }, []);
 
-  // Manual sync reserved for future FAB / keyboard shortcut use
+  // Active alarm overlay state
+  const [firingAlarm, setFiringAlarm] = useState(null);
+  const snoozeTimeout = useRef(null);
+
+  // ── Activate handlers ───────────────────────────────────────────────────────
+
+  const activateAlarm = useCallback((item) => {
+    const alarm = item._raw;
+    const soundName = alarm.sound || 'alarm-default';
+    const ext = ['alarm-default','alarm-gentle','alarm-military','chime',
+      'Argon','Carbon','Helium','Krypton','Neon','Osmium','Oxygen','Platinum'].includes(soundName)
+      ? 'wav' : 'mp3';
+    marsPlaySound(`/sounds/${soundName}.${ext}`, false);
+    setFiringAlarm(item);
+  }, []);
+
+  const dismissAlarm = useCallback(() => {
+    marsStopSound();
+    if (snoozeTimeout.current) { clearTimeout(snoozeTimeout.current); snoozeTimeout.current = null; }
+    // Open URL if alarm has one
+    if (firingAlarm?._raw?.openUrl) marsOpenUrl(firingAlarm._raw.openUrl);
+    setFiringAlarm(null);
+  }, [firingAlarm]);
+
+  const snoozeAlarm = useCallback(() => {
+    marsStopSound();
+    const snoozeMins = parseInt(localStorage.getItem('mars-snooze-duration') || '5', 10);
+    setFiringAlarm(null);
+    // Re-fire after snooze duration
+    snoozeTimeout.current = setTimeout(() => {
+      activateAlarm(firingAlarm);
+    }, snoozeMins * 60 * 1000);
+  }, [firingAlarm, activateAlarm]);
+
+  const activateRoutine = useCallback((item) => {
+    window.dispatchEvent(new CustomEvent('mars:start-routine', { detail: item._raw }));
+  }, []);
+
+  const activateLink = useCallback((item) => {
+    if (item.url) marsOpenUrl(item.url);
+  }, []);
+
+  const handleItemClick = useCallback((item) => {
+    if (item.type === 'alarm')   activateAlarm(item);
+    if (item.type === 'routine') activateRoutine(item);
+    if (item.type === 'link')    activateLink(item);
+  }, [activateAlarm, activateRoutine, activateLink]);
+
+  // Cleanup snooze timer on unmount
+  useEffect(() => () => {
+    if (snoozeTimeout.current) clearTimeout(snoozeTimeout.current);
+    marsStopSound();
+  }, []);
 
   const timeline = buildTimeline(alarms, routines, links);
   const userName  = user?.displayName?.trim() || localStorage.getItem('mars-guest-display-name') || 'there';
@@ -95,6 +173,15 @@ export default function Dashboard() {
 
   return (
     <div className="dash-page">
+
+      {/* Alarm fire overlay */}
+      {firingAlarm && (
+        <AlarmOverlay
+          alarm={firingAlarm._raw}
+          onDismiss={dismissAlarm}
+          onSnooze={snoozeAlarm}
+        />
+      )}
 
       {/* Missed alarm banner */}
       {missedAlarms.length > 0 && (
@@ -124,7 +211,7 @@ export default function Dashboard() {
 
       {/* ── My Day Section ─────────────────────────────────────────────── */}
       <div className="settings-group">
-        <div className="settings-group-label">MY DAY</div>
+        <div className="settings-group-label">MY DAY — tap to activate</div>
 
         {isLoading ? (
           // Skeleton rows while Firestore loads
@@ -154,10 +241,15 @@ export default function Dashboard() {
           timeline.map((item) => {
             const meta = TYPE_META[item.type];
             return (
-              <Link
+              <button
                 key={`${item.type}-${item.id}`}
-                to={meta.route}
-                className="settings-row myday-row"
+                className="settings-row myday-row myday-row--btn"
+                onClick={() => handleItemClick(item)}
+                title={
+                  item.type === 'alarm'   ? `Fire alarm: ${item.label}` :
+                  item.type === 'routine' ? `Start routine: ${item.label}` :
+                  `Open link: ${item.url}`
+                }
               >
                 <div className="sr-icon-wrap">
                   <i className={`ti ${meta.icon}`} />
@@ -177,15 +269,17 @@ export default function Dashboard() {
                 </div>
                 <div className="sr-right">
                   <span className="myday-countdown-pill">{item.countdown}</span>
-                  <i className="ti ti-chevron-right sr-chevron" />
+                  <i className={`ti ${
+                    item.type === 'alarm'   ? 'ti-player-play' :
+                    item.type === 'routine' ? 'ti-player-play' :
+                    'ti-external-link'
+                  } sr-chevron`} />
                 </div>
-              </Link>
+              </button>
             );
           })
         )}
       </div>
-
-
 
     </div>
   );

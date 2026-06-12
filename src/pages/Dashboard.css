@@ -241,3 +241,82 @@
   .sr-title { font-size: 0.85rem; }
   .sr-desc { font-size: 0.75rem; }
 }
+
+/* ── Alarm fire overlay ──────────────────────────────────────────── */
+.alarm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fade-in-overlay 0.2s ease;
+}
+@keyframes fade-in-overlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.alarm-overlay-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 32px 28px;
+  text-align: center;
+  max-width: 320px;
+  width: 90%;
+  animation: slide-up-card 0.25s ease;
+}
+@keyframes slide-up-card {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.alarm-overlay-icon {
+  font-size: 52px;
+  color: var(--green);
+  margin-bottom: 14px;
+  display: block;
+  animation: alarm-ring 0.45s ease-in-out infinite alternate;
+}
+@keyframes alarm-ring {
+  from { transform: rotate(-10deg); }
+  to   { transform: rotate(10deg);  }
+}
+.alarm-overlay-label {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.alarm-overlay-time {
+  font-size: 14px;
+  color: var(--text3);
+  margin-bottom: 26px;
+}
+.alarm-overlay-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ── My Day row as button ─────────────────────────────────────────── */
+.myday-row--btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+}
+.myday-row--btn:hover .sr-icon-wrap {
+  background: rgba(29, 158, 117, 0.14);
+  border-color: rgba(29, 158, 117, 0.35);
+}
+.myday-row--btn:hover .sr-icon-wrap i {
+  color: var(--green);
+}
+.myday-row--btn:active {
+  opacity: 0.75;
+}
