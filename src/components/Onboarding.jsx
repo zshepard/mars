@@ -55,9 +55,13 @@ export default function Onboarding() {
     if (!user) return;
     const uid = user.isGuest ? GUEST_ID : user.uid;
     if (!uid) return;
-    // Check localStorage first (instant)
+    // Check localStorage first (instant — avoids any flash)
     if (isOnboardingDone(uid)) return;
-    // For signed-in users also check Firestore in case they completed on another device
+    // For signed-in users: ALWAYS wait for Firestore before deciding to show.
+    // Never show the intro until we know for certain it hasn't been completed
+    // on another device. The old code had a race where the 600ms timer could
+    // fire before Firestore resolved, causing the intro to appear even for
+    // users who had already completed it.
     if (!user.isGuest && user.uid) {
       let cancelled = false;
       try {
@@ -66,21 +70,26 @@ export default function Onboarding() {
         getDoc(doc(db, 'users', user.uid)).then((snap) => {
           if (cancelled) return;
           if (snap.exists() && snap.data()?.onboardingComplete) {
-            // Mark locally so we don't check Firestore again
+            // Mark locally so we skip Firestore on next login
             localStorage.setItem(`${STORAGE_KEY}-${user.uid}`, '1');
+            // Explicitly hide — belt-and-suspenders in case anything else set it visible
+            setVisible(false);
             return;
           }
-          setTimeout(() => { if (!cancelled) setVisible(true); }, 600);
+          // Firestore confirmed: onboarding not done — safe to show
+          if (!cancelled) setVisible(true);
         }).catch(() => {
-          if (!cancelled) setTimeout(() => setVisible(true), 600);
+          // Firestore unavailable — localStorage already returned false above,
+          // so we show the intro as a safe fallback
+          if (!cancelled) setVisible(true);
         });
       } catch (e) {
-        if (!cancelled) setTimeout(() => setVisible(true), 600);
+        if (!cancelled) setVisible(true);
       }
       return () => { cancelled = true; };
     } else {
       // Guest — localStorage only
-      const t = setTimeout(() => setVisible(true), 600);
+      const t = setTimeout(() => setVisible(true), 400);
       return () => clearTimeout(t);
     }
   }, [user]);
