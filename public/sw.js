@@ -615,6 +615,19 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
     const alarmSoundUrl = isNativeRingtone
       ? '/sounds/alarm-default.wav'
       : `/sounds/${alarmSound}.${SW_WAV_IDS.has(alarmSound) ? 'wav' : 'mp3'}`;
+    // Tell all active clients (including the Android WebView bridge) to play the alarm sound.
+    // This is the only reliable way to play audio when the screen is off on Android —
+    // the Web Audio API is blocked when the page is hidden, and Chrome ignores the
+    // notification `sound:` property entirely.
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    allClients.forEach(client => {
+      client.postMessage({
+        type: 'MARS_PLAY_SOUND',
+        uri: alarmSound.startsWith('content://') ? alarmSound : alarmSoundUrl,
+        loop: true,
+        alarm_id,
+      });
+    });
     // Fire the notification
     await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
       body: payload.body || 'Time to start your routine.',

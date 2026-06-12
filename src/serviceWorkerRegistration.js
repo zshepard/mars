@@ -74,6 +74,31 @@ export function register(config = {}) {
         case 'MARS_OPEN_URL':
           dispatch('mars:open-url', { url: event.data.url, device: event.data.device });
           break;
+        // Play alarm sound — SW fires this when alarm triggers while page is hidden.
+        // Forward to the Android bridge (ReactNativeWebView) which drives AlarmSoundService.
+        // Also dispatch a custom event so the in-page overlay can show even if the
+        // page is technically still loaded but hidden (screen off).
+        case 'MARS_PLAY_SOUND':
+          dispatch('mars:play-sound', { uri: event.data.uri, loop: event.data.loop, alarm_id: event.data.alarm_id });
+          if (window.ReactNativeWebView) {
+            try {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'MARS_PLAY_SOUND',
+                uri: event.data.uri,
+                loop: event.data.loop ?? true,
+                alarm_id: event.data.alarm_id,
+              }));
+            } catch {}
+          }
+          break;
+        case 'MARS_STOP_SOUND':
+          dispatch('mars:stop-sound', {});
+          if (window.ReactNativeWebView) {
+            try {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MARS_STOP_SOUND' }));
+            } catch {}
+          }
+          break;
         default: break;
       }
     });
