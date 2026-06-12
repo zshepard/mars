@@ -294,6 +294,16 @@ function LinkForm({ title, form, setForm, onSave, onCancel, saving }) {
   );
 }
 
+/* ─── Device check helper ───────────────────────────────────────── */
+function shouldOpenOnThisDevice(device) {
+  if (!device || device === 'all') return true;
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  if (device === 'phone')    return isMobile;
+  if (device === 'computer') return !isMobile;
+  return true;
+}
+
 /* ─── Client-side link timer ─────────────────────────────────────── */
 function useLinkTimer(links) {
   const firedRef = useRef(new Set());
@@ -323,8 +333,10 @@ function useLinkTimer(links) {
         if (days.length > 0 && !days.includes(todayName)) return;
 
         firedRef.current.add(fireKey);
-        // Open the URL
-        openExternalUrl(link.url);
+        // Only open on this device if device targeting matches
+        if (shouldOpenOnThisDevice(link.device)) {
+          openExternalUrl(link.url);
+        }
       });
 
       // Update countdowns
