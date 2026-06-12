@@ -150,24 +150,29 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
 
     setFiringAlarm(alarm);
 
-    // Determine which sound to play on the web side.
-    // Native Android ringtone URIs (content://) can't be loaded as <Audio> on web —
-    // post a bridge message so the Android TWA can play the native ringtone,
-    // and fall back to alarm-default for the web Audio element.
+    // Determine which sound to play.
     const rawSound = alarm.sound || 'alarm-default';
     const isNativeUri = rawSound.startsWith('content://');
-    if (isNativeUri && window.ReactNativeWebView) {
-      // Tell the Android host to play this native ringtone URI
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'MARS_PLAY_SOUND',
-        uri: rawSound,
-        loop: true,
-      }));
-    }
-    // Always start the web Audio element too (falls back to default for native URIs)
     const webSound = isNativeUri ? 'alarm-default' : rawSound;
     const ext = soundExt(webSound);
-    const audio = new Audio(`/sounds/${webSound}.${ext}`);
+    const soundUrl = `/sounds/${webSound}.${ext}`;
+
+    // Always notify the Android bridge so AlarmSoundService can play the
+    // system ringtone. This is the only reliable path when the screen is off
+    // because Chrome blocks Web Audio on hidden pages.
+    if (window.ReactNativeWebView) {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'MARS_PLAY_SOUND',
+          uri: isNativeUri ? rawSound : soundUrl,
+          useSystemAlarm: !isNativeUri,
+          loop: true,
+        }));
+      } catch {}
+    }
+    // Also start the web Audio element for when the page IS visible
+    // (screen on, app in foreground). Will be silently blocked if hidden.
+    const audio = new Audio(soundUrl);
     audio.loop = true;
     audio.volume = 1.0;
     audio.play().catch(() => {});
