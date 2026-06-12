@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_alarm.xml
+    Full-screen lock screen alarm UI for MARS.
+    Place this file at:  app/src/main/res/layout/activity_alarm.xml
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#0D0D1A"
+    android:padding="40dp">
+
+    <!-- Pulsing alarm bell icon -->
+    <ImageView
+        android:id="@+id/iv_alarm_icon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@android:drawable/ic_lock_idle_alarm"
+        android:tint="#1D9E75"
+        android:layout_marginBottom="32dp"
+        android:contentDescription="Alarm" />
+
+    <!-- App name / branding -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MARS"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.25"
+        android:textColor="#1D9E75"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Alarm label (set dynamically in AlarmActivity.kt) -->
+    <TextView
+        android:id="@+id/tv_alarm_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MARS Alarm"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Alarm time (set dynamically in AlarmActivity.kt) -->
+    <TextView
+        android:id="@+id/tv_alarm_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="18sp"
+        android:textColor="#888888"
+        android:gravity="center"
+        android:layout_marginBottom="56dp" />
+
+    <!-- Dismiss button — primary action -->
+    <Button
+        android:id="@+id/btn_dismiss"
+        android:layout_width="260dp"
+        android:layout_height="58dp"
+        android:text="Dismiss"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#1D9E75"
+        android:layout_marginBottom="16dp"
+        android:stateListAnimator="@null" />
+
+    <!-- Snooze button — secondary action -->
+    <Button
+        android:id="@+id/btn_snooze"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="Snooze 5 min"
+        android:textSize="15sp"
+        android:textColor="#AAAAAA"
+        android:backgroundTint="#1A1A2E"
+        android:stateListAnimator="@null" />
+
+</LinearLayout>
