@@ -29,21 +29,24 @@ function soundExt(soundId) {
   return WAV_IDS.has(soundId) ? 'wav' : 'mp3';
 }
 
-// Returns true if this device matches the alarm's target device
-function isTargetDevice(openDevice) {
-  if (!openDevice || openDevice === 'all') return true;
+// Returns true if the URL attached to this alarm should open on this device.
+// The alarm SOUND always fires on every device — only the URL is device-targeted.
+// Uses linkDevice (new field) with fallback to openDevice (legacy field).
+function shouldOpenUrlOnThisDevice(alarm) {
+  const target = alarm.linkDevice || alarm.openDevice || 'all';
+  if (target === 'all') return true;
   const ua = navigator.userAgent || '';
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-  if (openDevice === 'phone')    return isMobile;
-  if (openDevice === 'computer') return !isMobile;
+  if (target === 'phone')    return isMobile;
+  if (target === 'computer') return !isMobile;
   return true;
 }
 
-// Returns true if the alarm should fire right now
+// Returns true if the alarm should fire right now.
+// NOTE: the alarm SOUND always fires on every device — device targeting
+// only controls where the URL opens, not whether the alarm sounds.
 function shouldFireNow(alarm) {
   if (!alarm.enabled) return false;
-  // Device targeting — skip if this device is not the target
-  if (!isTargetDevice(alarm.openDevice)) return false;
   const now = new Date();
   const [h, m] = (alarm.time || '').split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return false;
@@ -108,7 +111,7 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
       } catch {}
       if (typeof onAlarmFired === 'function') onAlarmFired(alarm.id);
     }
-    if (alarm?.openUrl) {
+    if (alarm?.openUrl && shouldOpenUrlOnThisDevice(alarm)) {
       openExternalUrl(alarm.openUrl);
     }
   }, [clearAutoDismiss, stopAudio, onAlarmFired]);
@@ -186,8 +189,8 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
               audioRef.current.currentTime = 0;
               audioRef.current = null;
             }
-            // Open URL if set
-            if (alarmSnapshot.openUrl) {
+            // Open URL only if this device is the target
+            if (alarmSnapshot.openUrl && shouldOpenUrlOnThisDevice(alarmSnapshot)) {
               openExternalUrl(alarmSnapshot.openUrl);
             }
             return null; // clear the firing alarm

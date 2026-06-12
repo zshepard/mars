@@ -88,7 +88,7 @@ const DEVICES = ['phone','computer','all'];
 const EMPTY_ALARM = {
   time: '05:30', label: '', enabled: true,
   autoDismiss: false, dismissAfter: 60,
-  openUrl: '', openDevice: 'phone',
+  openUrl: '', linkDevice: 'all',
   days: ['Mon','Tue','Wed','Thu','Fri'],
   sound: 'alarm-default', routineStep: '',
 };
@@ -180,10 +180,13 @@ function AlarmForm({ title, form, setForm, onSave, onCancel, saving }) {
             onChange={e => set('openUrl', e.target.value)} />
         </div>
         <div className="form-field">
-          <label>Open on device</label>
-          <select value={form.openDevice} onChange={e => set('openDevice', e.target.value)}>
-            {DEVICES.map(d => <option key={d} value={d}>{d}</option>)}
+          <label>Open link on device</label>
+          <select value={form.linkDevice || 'all'} onChange={e => set('linkDevice', e.target.value)}>
+            <option value="all">All devices</option>
+            <option value="phone">Phone only</option>
+            <option value="computer">Computer only</option>
           </select>
+          <span className="form-hint">Alarm sound always fires on your phone</span>
         </div>
       </div>
       <div className="form-grid">
@@ -488,7 +491,7 @@ export default function Alarms() {
     name: '', type: 'morning',
     days: ['Mon','Tue','Wed','Thu','Fri'],
     triggerTime: '', sound: 'alarm-default',
-    openUrl: '', openDevice: 'phone',
+    openUrl: '', linkDevice: 'all',
   };
   const [showRoutineForm, setShowRoutineForm] = useState(false);
   const [routineForm, setRoutineForm]         = useState(EMPTY_ROUTINE);
@@ -534,7 +537,7 @@ export default function Alarms() {
       time: alarm.time || '05:30', label: alarm.label || '',
       enabled: alarm.enabled ?? true, autoDismiss: alarm.autoDismiss ?? false,
       dismissAfter: alarm.dismissAfter ?? 60, openUrl: alarm.openUrl || '',
-      openDevice: alarm.openDevice || 'phone', days: alarm.days || [],
+      linkDevice: alarm.linkDevice || alarm.openDevice || 'all', days: alarm.days || [],
       sound: alarm.sound || 'alarm-default', routineStep: alarm.routineStep || '',
     });
   };
@@ -704,7 +707,7 @@ export default function Alarms() {
                         {alarm.openUrl && (
                           <div className="alarm-url">
                             <i className="ti ti-external-link" />
-                            <span>{alarm.openUrl} · {alarm.openDevice}</span>
+                            <span>{alarm.openUrl} · {alarm.linkDevice || alarm.openDevice || 'all'}</span>
                           </div>
                         )}
                         <div className="alarm-tags">
@@ -904,10 +907,13 @@ export default function Alarms() {
                     onChange={e => setR('openUrl', e.target.value)} />
                 </div>
                 <div className="form-field">
-                  <label>Open on device</label>
-                  <select value={routineForm.openDevice} onChange={e => setR('openDevice', e.target.value)}>
-                    {DEVICES.map(d => <option key={d} value={d}>{d}</option>)}
+                  <label>Open link on device</label>
+                  <select value={routineForm.linkDevice || 'all'} onChange={e => setR('linkDevice', e.target.value)}>
+                    <option value="all">All devices</option>
+                    <option value="phone">Phone only</option>
+                    <option value="computer">Computer only</option>
                   </select>
+                  <span className="form-hint">Alarm sound always fires on your phone</span>
                 </div>
               </div>
               <div className="form-actions">
