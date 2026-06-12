@@ -99,12 +99,19 @@ export function marsCancelAlarm(alarm_id) {
 
 /**
  * Play an alarm sound.
- * In native: plays Android system ringtone via RingtoneManager.
- * In browser: plays MP3 via Web Audio API.
+ * In native (Android): starts AlarmSoundService which uses the system
+ *   default alarm sound via RingtoneManager routed to USAGE_ALARM.
+ *   The uri param is ignored on Android — system alarm sound is always used.
+ * In browser: plays the MP3 file via Web Audio API.
+ *
+ * @param {string} uri  - Web audio file path (e.g. '/sounds/alarm-default.wav')
+ * @param {boolean} loop - Whether to loop the sound (web only; Android always loops)
  */
 export function marsPlaySound(uri, loop = true) {
   if (isNative()) {
-    postToNative({ type: 'MARS_PLAY_SOUND', uri, loop });
+    // Android: tell the native layer to start AlarmSoundService
+    // ACTION_PLAY is handled in MainActivity_Bridge_Snippet.kt
+    postToNative({ type: 'MARS_PLAY_SOUND', uri, loop, useSystemAlarm: true });
   } else {
     // Web Audio fallback
     try {

@@ -1,0 +1,21 @@
+<!-- Add these to your AndroidManifest.xml inside the <manifest> tag -->
+
+<!-- Required: play audio and modify volume/stream routing -->
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+<!-- Required: keep the CPU alive while the alarm fires -->
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+
+<!-- Required: start the ForegroundService that keeps audio playing -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+<!-- Required (Android 14+): declare the foreground service type as mediaPlayback -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+
+<!-- Add this inside the <application> tag -->
+
+<service
+    android:name=".AlarmSoundService"
+    android:foregroundServiceType="mediaPlayback"
+    android:exported="false" />
