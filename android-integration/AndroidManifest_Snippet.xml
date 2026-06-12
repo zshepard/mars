@@ -1,20 +1,73 @@
-<!-- Add these to your AndroidManifest.xml inside the <manifest> tag -->
+<!-- ─────────────────────────────────────────────────────────────────────────
+     MARS Android Alarm System — AndroidManifest.xml additions
+     Add the <uses-permission> tags inside <manifest>
+     Add the <receiver>, <activity>, and <service> tags inside <application>
+     ───────────────────────────────────────────────────────────────────────── -->
 
-<!-- Required: play audio and modify volume/stream routing -->
+<!-- ══ PERMISSIONS (inside <manifest>) ══════════════════════════════════════ -->
+
+<!-- Play audio and modify volume/stream routing -->
 <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-<!-- Required: keep the CPU alive while the alarm fires -->
+<!-- Keep CPU alive while alarm fires (required for wake-up alarms) -->
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-<!-- Required: start the ForegroundService that keeps audio playing -->
+<!-- Schedule exact alarms — required Android 12+ (API 31+) -->
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+<!-- Exact alarm permission for clock/alarm apps — required Android 13+ (API 33+) -->
+<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+<!-- Show alarm notification on lock screen — required Android 13+ (API 33+) -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+<!-- Start the ForegroundService that keeps audio playing when app is backgrounded -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-<!-- Required (Android 14+): declare the foreground service type as mediaPlayback -->
+<!-- Declare foreground service type — required Android 14+ (API 34+) -->
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+<!-- Allow alarm to fire in Doze mode (device asleep) -->
+<!-- Note: USE_EXACT_ALARM already covers this for alarm-category apps -->
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-<!-- Add this inside the <application> tag -->
 
+<!-- ══ COMPONENTS (inside <application>) ════════════════════════════════════ -->
+
+<!--
+    AlarmReceiver: receives AlarmManager broadcasts at the scheduled time.
+    exported=true is required so the OS can deliver the broadcast.
+    The intent-filter for BOOT_COMPLETED re-registers alarms after reboot.
+-->
+<receiver
+    android:name=".AlarmReceiver"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+    </intent-filter>
+</receiver>
+
+<!--
+    AlarmActivity: full-screen lock screen UI shown when alarm fires.
+    showOnLockScreen=true and turnScreenOn=true are required for it to
+    appear over the lock screen without the user unlocking first.
+    noHistory=true prevents it from staying in the back stack after dismiss.
+-->
+<activity
+    android:name=".AlarmActivity"
+    android:exported="false"
+    android:showOnLockScreen="true"
+    android:turnScreenOn="true"
+    android:noHistory="true"
+    android:launchMode="singleTop"
+    android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+<!--
+    AlarmSoundService: ForegroundService that holds the MediaPlayer.
+    foregroundServiceType=mediaPlayback is required on Android 14+.
+    exported=false — only started internally, never from outside the app.
+-->
 <service
     android:name=".AlarmSoundService"
     android:foregroundServiceType="mediaPlayback"
