@@ -1,5 +1,5 @@
 // src/pages/Alarms.jsx  — unified Alarms + Scheduled Links + Routines
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth }           from '../hooks/useAuth';
 import { useAlarms }         from '../hooks/useAlarms';

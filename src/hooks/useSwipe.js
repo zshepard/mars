@@ -48,13 +48,8 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown } =
 /* ── Swipe-to-delete hook ───────────────────────────────────────────── */
 // Returns { swiped, handlers } where swiped=true reveals the delete action.
 // Swiping left reveals delete; swiping right (or tapping elsewhere) hides it.
+// eslint-disable-next-line no-unused-vars
 export function useSwipeDelete() {
-  const start = useRef(null);
-  const [swiped, setSwiped] = [
-    useRef(false),
-    (v) => { swiped.current = v; },
-  ];
-
-  // Use a simpler state-based approach
-  return null; // placeholder — see SwipeItem component below
+  // placeholder — see SwipeItem component below
+  return null;
 }

@@ -130,7 +130,8 @@ export function useSyncedProfile(user) {
         unsubRef.current = null;
       }
     };
-  }, [user?.uid]); // re-run only when the user's uid changes (i.e. sign in/out)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]); // intentionally use user?.uid — re-run only when uid changes, not on every user object reference change
 
   return { profile, syncing, lastSyncAt };
 }

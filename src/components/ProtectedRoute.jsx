@@ -33,7 +33,7 @@ export default function ProtectedRoute({ children }) {
 
   // Open the real-time Firestore listener for the authenticated user.
   // useSyncedProfile is a no-op when user is null or guest.
-  const { profile, syncing, lastSyncAt } = useSyncedProfile(user);
+  useSyncedProfile(user); // starts the Firestore listener; profile/sync state handled internally
 
   // ── Android WebView sync bridge ─────────────────────────────────────────────
   // When the Firestore profile updates, inject the new profile into the

@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useRef, useCallback, useEffect }   from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate }     from 'react-router-dom';
 import { AuthProvider }                                from './hooks/useAuth';
 import ProtectedRoute                                  from './components/ProtectedRoute';
@@ -101,11 +101,6 @@ function AppShell() {
     return () => window.removeEventListener('mars:background-pack-changed', handler);
   }, []);
 
-  // Swipe gestures removed — sidebar is permanently collapsed on desktop.
-  const touchStart = useRef(null);
-  const onTouchStart = useCallback(() => {}, []);
-  const onTouchEnd   = useCallback(() => {}, []);
-
   // ── Global URL opener ──────────────────────────────────────────────────────
   // Listens for mars:open-url dispatched by serviceWorkerRegistration.js when
   // a scheduled link notification is tapped or the SW fires a link open.
@@ -129,11 +124,7 @@ function AppShell() {
   }, []);
 
   return (
-    <div
-      className={`app-shell${isMobile ? ' app-shell--mobile' : ''}`}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className={`app-shell${isMobile ? ' app-shell--mobile' : ''}`}>
       {/* Topbar — on mobile/TWA, hide the hamburger since BottomNav handles navigation */}
       <Topbar
         onMenuToggle={() => setSidebarOpen(p => !p)}

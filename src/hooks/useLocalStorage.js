@@ -1,6 +1,6 @@
 // src/hooks/useLocalStorage.js
 // Provides localStorage-based CRUD that mirrors Firestore API for offline/guest mode
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // eslint-disable-line
 
 function getStored(key, fallback = []) {
   try {
@@ -22,7 +22,7 @@ function setStored(key, data) {
  */
 export function useLocalCollection(key, defaultData = []) {
   const [items, setItems] = useState(() => getStored(key, defaultData));
-  const [loading, setLoading] = useState(false);
+  const loading = false;
 
   useEffect(() => {
     setStored(key, items);

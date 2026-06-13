@@ -6,6 +6,7 @@ import { isNative, onNativeMessage } from '../marsBridge';
 
 // ── Permission status helpers ─────────────────────────────────────────────────
 // Returns 'granted' | 'denied' | 'prompt' | 'unsupported'
+// eslint-disable-next-line no-unused-vars
 async function queryPermission(name) {
   if (!navigator.permissions) return 'unsupported';
   try {

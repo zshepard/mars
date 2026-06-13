@@ -419,7 +419,7 @@ export const COMMAND_DEFS = [
       const timeStr = use24
         ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
         : now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-      return { success: true, message: `It\'s ${timeStr}` };
+      return { success: true, message: `It's ${timeStr}` };
     },
   },
   {
