@@ -22,6 +22,7 @@ import { useRoutines }                                 from './hooks/useRoutines
 import PullToRefresh                                   from './components/PullToRefresh';
 import RoutinePlayer                                   from './components/RoutinePlayer';
 import Onboarding                                      from './components/Onboarding';
+import WhatsNew                                        from './components/WhatsNew';
 import ErrorBoundary from './components/ErrorBoundary';
 import './styles/global.css';
 import './App.css';
@@ -166,6 +167,8 @@ function AppShell() {
       <RoutinePlayer />
       {/* Onboarding overlay — shown once to new users and guests */}
       <Onboarding />
+      {/* What's New modal — shown once per version after an update */}
+      <WhatsNew />
     </div>
   );
 }

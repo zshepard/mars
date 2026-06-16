@@ -1,0 +1,120 @@
+/* src/components/WhatsNew.css */
+
+.wn-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.80);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: wn-fade-in 0.25s ease-out forwards;
+}
+
+@keyframes wn-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.wn-sheet {
+  background: var(--card-bg, #0d0d1a);
+  border-top: 1px solid rgba(29, 158, 117, 0.35);
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+  padding: 1.75rem 1.75rem 2.5rem;
+  width: 100%;
+  max-width: 480px;
+  animation: wn-slide-up 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes wn-slide-up {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.wn-header {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.wn-badge {
+  display: inline-block;
+  background: rgba(29, 158, 117, 0.15);
+  color: #1d9e75;
+  border: 1px solid rgba(29, 158, 117, 0.4);
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 0.2rem 0.65rem;
+  margin-bottom: 0.85rem;
+  text-transform: uppercase;
+}
+
+.wn-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary, #ffffff);
+  margin: 0 0 0.3rem;
+}
+
+.wn-version {
+  font-size: 0.8rem;
+  color: var(--text-muted, #888);
+  margin: 0;
+}
+
+.wn-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 1.1rem 0;
+}
+
+.wn-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.wn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.wn-bullet {
+  color: #1d9e75;
+  font-size: 1rem;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.wn-text {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #d0d0d0);
+  line-height: 1.5;
+}
+
+.wn-btn {
+  width: 100%;
+  background: #1d9e75;
+  color: #fff;
+  border: none;
+  border-radius: 0.875rem;
+  padding: 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.wn-btn:hover  { opacity: 0.9; }
+.wn-btn:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wn-backdrop, .wn-sheet { animation: none; }
+}
