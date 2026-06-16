@@ -5,6 +5,7 @@ import { useAuth }         from '../hooks/useAuth';
 import { useMars }         from '../hooks/useMars';
 import { usePreferences }  from '../hooks/usePreferences';
 import { getPackById }     from '../data/backgroundPacks';
+import { NEON_THEMES, getThemeById, applyTheme, getSavedThemeId } from '../data/neonThemes';
 import './Settings.css';
 
 // ── Collapsible section wrapper ───────────────────────────────────────────────
@@ -69,6 +70,14 @@ export default function Settings() {
   };
 
   const [defaultDevice, setDefaultDevice] = useState('phone');
+
+  // Neon theme state
+  const [activeThemeId, setActiveThemeId] = useState(() => getSavedThemeId());
+  const handleThemeSelect = (themeId) => {
+    setActiveThemeId(themeId);
+    applyTheme(themeId);
+    window.dispatchEvent(new CustomEvent('mars:theme-changed', { detail: themeId }));
+  };
 
   // Account editing
   const [editingUsername, setEditingUsername] = useState(false);
@@ -263,6 +272,43 @@ export default function Settings() {
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <div style={{width:40,height:20,borderRadius:4,background:currentPack?.preview||'var(--bg2)',border:'1px solid var(--border)',flexShrink:0}} />
             <i className="ti ti-chevron-right" style={{color:'var(--text3)'}} />
+          </div>
+        </div>
+
+        {/* ── Neon Color Theme ── */}
+        <div style={{borderBottom:'1px solid var(--border)'}}>
+          <div className="settings-row" style={{borderBottom:'none',paddingBottom:8}}>
+            <div>
+              <div className="settings-val"><i className="ti ti-color-swatch" style={{marginRight:6}} />Accent Color</div>
+              <div className="settings-sub">Neon color used across the entire app</div>
+            </div>
+            <div className="theme-preview-bar" style={{margin:0,padding:'6px 10px'}}>
+              <div
+                className="theme-preview-accent"
+                style={{
+                  background: getThemeById(activeThemeId).accent,
+                  '--swatch-glow': getThemeById(activeThemeId).accentGlow,
+                }}
+              />
+              <span style={{fontSize:11,color:'var(--text2)'}}>{getThemeById(activeThemeId).label}</span>
+            </div>
+          </div>
+          <div className="theme-picker">
+            {NEON_THEMES.map(theme => (
+              <button
+                key={theme.id}
+                className={`theme-swatch${activeThemeId === theme.id ? ' active' : ''}`}
+                onClick={() => handleThemeSelect(theme.id)}
+                title={theme.label}
+                style={{ '--swatch-glow': theme.accentGlow }}
+              >
+                <div
+                  className="theme-swatch-dot"
+                  style={{ background: theme.accent }}
+                />
+                <span className="theme-swatch-label">{theme.label.replace('Neon ', '').replace('MARS ', '')}</span>
+              </button>
+            ))}
           </div>
         </div>
 

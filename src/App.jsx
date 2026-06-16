@@ -15,6 +15,7 @@ import Platforms                                       from './pages/Platforms';
 import Settings                                        from './pages/Settings';
 import BackgroundPacks                                 from './pages/BackgroundPacks';
 import { getPackById }                                 from './data/backgroundPacks';
+import { applyTheme, getSavedThemeId }                 from './data/neonThemes';
 import { usePreferences }                              from './hooks/usePreferences';
 import { useAuth }                                     from './hooks/useAuth';
 import { useAlarms }                                   from './hooks/useAlarms';
@@ -100,6 +101,14 @@ function AppShell() {
     const handler = (e) => applyPack(e.detail);
     window.addEventListener('mars:background-pack-changed', handler);
     return () => window.removeEventListener('mars:background-pack-changed', handler);
+  }, []);
+
+  // ── Apply saved neon theme on mount + listen for live changes ─────────────
+  useEffect(() => {
+    applyTheme(getSavedThemeId());
+    const handler = (e) => applyTheme(e.detail);
+    window.addEventListener('mars:theme-changed', handler);
+    return () => window.removeEventListener('mars:theme-changed', handler);
   }, []);
 
   // ── Global URL opener ──────────────────────────────────────────────────────
