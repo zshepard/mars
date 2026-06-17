@@ -104,7 +104,7 @@ export default function Settings() {
       setTimeout(() => setUsernameStatus(null), 2500);
     } catch (e) {
       setUsernameStatus('error');
-      console.error(e);
+      console.error('[Settings] updateUsername error:', e);
     }
   };
 
@@ -138,7 +138,7 @@ export default function Settings() {
       setTimeout(() => setResetStatus(null), 5000);
     } catch (e) {
       setResetStatus('error');
-      console.error(e);
+      console.error('[Settings] passwordReset error:', e);
     }
   };
 

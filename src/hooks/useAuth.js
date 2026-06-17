@@ -90,8 +90,6 @@ const GOOGLE_CLIENT_ID =
 
 // Log the auth domain on startup for debugging
 if (typeof window !== 'undefined') {
-  console.info('[MARS Auth] authDomain =', auth.config?.authDomain ?? window.location.hostname);
-  console.info('[MARS Auth] Google Client ID =', GOOGLE_CLIENT_ID.slice(0, 20) + '...');
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +200,6 @@ async function syncUserProfile(firebaseUser, platform = 'web') {
         platform,
         platforms:       [platform],         // list of all platforms ever used
       });
-      console.info('[MARS Auth] New user record created — sub:', googleSub, 'email:', firebaseUser.email);
     } else {
       // ── Returning user: update mutable fields only ────────────────────────
       // IMPORTANT: uid and googleSub are NEVER overwritten — they are the

@@ -43,7 +43,7 @@ export default function Login() {
         await loginWithGSI(response.credential);
         navigate(from, { replace: true });
       } catch (e) {
-        console.error('GSI sign-in error:', e);
+        console.error('[Login] GSI sign-in error:', e);
         setError('Google sign-in failed. Please try email/password.');
       } finally {
         setLoading(false);

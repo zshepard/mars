@@ -19,8 +19,6 @@ const firebaseConfig = {
   appId:             process.env.REACT_APP_FIREBASE_APP_ID             || '1:000:web:000',
 };
 
-console.info('[MARS Firebase] authDomain =', firebaseConfig.authDomain);
-console.info('[MARS Firebase] projectId  =', firebaseConfig.projectId);
 
 const app = initializeApp(firebaseConfig);
 
@@ -57,10 +55,8 @@ export const isFirebaseConfigured = () => {
 // ---------------------------------------------------------------------------
 export async function reconnectFirestore() {
   try {
-    console.info('[MARS Firestore] Forcing network reconnect…');
     await disableNetwork(db);
     await enableNetwork(db);
-    console.info('[MARS Firestore] Network reconnected.');
     return true;
   } catch (err) {
     console.warn('[MARS Firestore] Reconnect failed:', err);
