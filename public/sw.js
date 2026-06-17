@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.6.0'; // fix: overlay fires without notification tap; screen-off wake vibration
+const MARS_VERSION  = 'mars-v1.6.1'; // fix: SW-side auto-dismiss works when screen off / tab hidden
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -640,6 +640,9 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
         snooze_minutes: payload.snoozeMinutes || payload.snooze_minutes || 5,
       });
     });
+    // Read auto-dismiss settings from the alarm payload
+    const autoDismiss   = payload.autoDismiss   ?? false;
+    const dismissAfter  = payload.dismissAfter  ?? 60;  // seconds
     // Fire the notification (shown in notification tray for background/screen-off case)
     // silent: false + strong vibration pattern wakes the screen on Android Chrome
     await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
@@ -649,8 +652,10 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
       sound: alarmSoundUrl,
       silent: false,
       vibrate: [500, 200, 500, 200, 800, 200, 500],
-      requireInteraction: true,
-      data: { alarm_id, ...payload },
+      // requireInteraction: false when autoDismiss is on — lets the notification
+      // disappear on its own after dismissAfter seconds without user interaction.
+      requireInteraction: !autoDismiss,
+      data: { alarm_id, ...payload, autoDismiss, dismissAfter },
       tag: alarm_id,
       renotify: true,
       actions: [
@@ -658,7 +663,40 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
         { action: 'snooze', title: '\u23f1 Snooze 5m' },
       ],
     });
-    console.log(`[MARS SW] Alarm ${alarm_id} fired!`);
+    console.log(`[MARS SW] Alarm ${alarm_id} fired! autoDismiss=${autoDismiss} after=${dismissAfter}s`);
+
+    // ── SW-side auto-dismiss ──────────────────────────────────────────
+    // When autoDismiss is enabled, close the notification after dismissAfter
+    // seconds and open the URL (if any). This runs in the SW context so it
+    // is NOT frozen by Chrome's tab throttling — it fires reliably even when
+    // the screen is off or the tab is hidden.
+    if (autoDismiss && dismissAfter > 0) {
+      // Use a Promise-based delay so the SW stays alive for the full duration.
+      // We wrap in a detached async IIFE — the SW keepalive is handled by the
+      // fact that showNotification already extended the SW lifetime.
+      (async () => {
+        await new Promise(r => setTimeout(r, dismissAfter * 1000));
+        // Close the notification
+        const notifs = await self.registration.getNotifications({ tag: alarm_id });
+        notifs.forEach(n => n.close());
+        // Tell all clients to dismiss the in-page overlay and open the URL
+        const dismissClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        dismissClients.forEach(client => {
+          client.postMessage({
+            type: 'MARS_AUTO_DISMISSED',
+            alarm_id,
+            open_url:   payload.openUrl   || payload.open_url   || null,
+            open_device: payload.linkDevice || payload.openDevice || 'all',
+          });
+        });
+        // If app is closed, open the URL directly
+        if (dismissClients.length === 0 && (payload.openUrl || payload.open_url)) {
+          const url = payload.openUrl || payload.open_url;
+          await self.clients.openWindow(url);
+        }
+        console.log(`[MARS SW] Alarm ${alarm_id} auto-dismissed after ${dismissAfter}s`);
+      })();
+    }
   }, safeDelay);
   console.log(`[MARS SW] Alarm ${alarm_id} scheduled in ${Math.round(safeDelay/1000)}s`);
 }

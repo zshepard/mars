@@ -278,6 +278,36 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
 
     const onSwMessage = (event) => {
       const { type, alarm_id } = event.data || {};
+
+      // SW auto-dismissed the alarm (screen was off / tab hidden) — dismiss
+      // the in-page overlay and open the URL if configured.
+      if (type === 'MARS_AUTO_DISMISSED' && alarm_id) {
+        setFiringAlarm((current) => {
+          if (current && current.id === alarm_id) {
+            // Stop audio
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current.currentTime = 0;
+              audioRef.current = null;
+            }
+            // Open URL if this device is the target
+            const url = event.data.open_url;
+            const device = event.data.open_device || 'all';
+            if (url && shouldOpenUrlOnThisDevice({ linkDevice: device })) {
+              openExternalUrl(url);
+            }
+            // Write lastFiredAt
+            try {
+              localStorage.setItem(`mars-alarm-lastfired-${alarm_id}`, new Date().toISOString());
+            } catch {}
+            if (typeof onAlarmFired === 'function') onAlarmFired(alarm_id);
+            return null;
+          }
+          return current;
+        });
+        return;
+      }
+
       if (type === 'MARS_SHOW_ALARM_OVERLAY' && alarm_id) {
         const alarm = alarmsRef.current.find(a => a.id === alarm_id);
         if (alarm) {
