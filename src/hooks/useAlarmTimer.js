@@ -325,7 +325,8 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
     };
     navigator.serviceWorker?.addEventListener('message', onSwMessage);
     return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
-  }, [alarms, fireAlarmFn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alarms, fireAlarmFn]); // onAlarmFired intentionally excluded — it's called inside fireAlarmFn which is already a dep
 
   // ── Visibility change: when user brings the app back into view ────
   // If a SW notification fired while the page was hidden and the user taps
