@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.6.1'; // fix: SW-side auto-dismiss works when screen off / tab hidden
+const MARS_VERSION  = 'mars-v1.6.2'; // fix: 2s early-fire compensation for SW startup latency
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -580,13 +580,18 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
   if (scheduledAlarmTimers[alarm_id]) {
     clearTimeout(scheduledAlarmTimers[alarm_id]);
   }
-  const delay = new Date(fire_at).getTime() - Date.now();
+  // Subtract 2s to compensate for SW startup latency + async overhead.
+  // The SW setTimeout fires on time but the notification/overlay appears
+  // 1-4s later due to SW wake + cache reads + client.postMessage roundtrip.
+  // Firing 2s early means the alarm lands exactly on the scheduled minute.
+  const EARLY_FIRE_MS = 2000;
+  const delay = new Date(fire_at).getTime() - Date.now() - EARLY_FIRE_MS;
   if (delay <= 0) {
-    console.log(`[MARS SW] Alarm ${alarm_id} fire_at is in the past — skipping`);
-    return;
+    // Already past (or within the early-fire window) — fire immediately
+    console.log(`[MARS SW] Alarm ${alarm_id} firing immediately (within early-fire window)`);
   }
   // Cap at 24h — SW will be restarted and alarms re-loaded from cache before then
-  const safeDelay = Math.min(delay, 86400000);
+  const safeDelay = Math.max(0, Math.min(delay, 86400000));
   scheduledAlarmTimers[alarm_id] = setTimeout(async () => {
     delete scheduledAlarmTimers[alarm_id];
     // Remove from persistence after firing
