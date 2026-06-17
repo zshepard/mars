@@ -191,7 +191,8 @@ export default function Login() {
       </div>
 
       {/* ── MAIN SIGN-IN SCREEN ─────────────────────────────────── */}
-      <div className={`login-card${screen !== 'main' ? ' login-card--hidden' : ''}`}>
+      <div className="login-card-wrapper">
+      <div className={`login-card login-card--enter${screen !== 'main' ? ' login-card--hidden' : ''}`}>
         <div className="login-logo">
           <svg width="52" height="52" viewBox="0 0 64 64" fill="none">
             <rect width="64" height="64" rx="16" fill="#111"/>
@@ -404,6 +405,7 @@ export default function Login() {
           </button>
         </p>
       </div>
+      </div>{/* end login-card-wrapper */}
     </div>
   );
 }

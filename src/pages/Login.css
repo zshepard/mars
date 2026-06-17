@@ -42,9 +42,20 @@
   to   { opacity: 0; transform: translateX(-40px) scale(0.97); }
 }
 
+/* ── Card wrapper — gives absolute cards a real height ────────── */
+.login-card-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  min-height: 560px;
+}
+
 /* ── Base card ────────────────────────────────────────────────── */
 .login-card {
   position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.1);
@@ -53,13 +64,15 @@
   border-radius: 24px;
   padding: 44px 36px;
   width: 100%;
-  max-width: 400px;
   text-align: center;
   box-shadow: 0 40px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05);
-  animation: cardIn 0.45s var(--ease-out) both;
-  /* default: visible */
+  /* No animation on base class — only on first mount via .login-card--enter */
   pointer-events: auto;
   transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+}
+/* First-mount entrance — added once via JS, removed after animation */
+.login-card--enter {
+  animation: cardIn 0.45s var(--ease-out) both;
 }
 
 /* Main card hidden (when signup is showing) */
