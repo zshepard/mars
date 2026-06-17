@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.5.0'; // fix false notifications: dedup, no early-fire, foreground close
+const MARS_VERSION  = 'mars-v1.6.0'; // fix: overlay fires without notification tap; screen-off wake vibration
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
@@ -615,10 +615,12 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
     const alarmSoundUrl = isNativeRingtone
       ? '/sounds/alarm-default.wav'
       : `/sounds/${alarmSound}.${SW_WAV_IDS.has(alarmSound) ? 'wav' : 'mp3'}`;
-    // Tell all active clients (including the Android WebView bridge) to play the alarm sound.
-    // This is the only reliable way to play audio when the screen is off on Android —
-    // the Web Audio API is blocked when the page is hidden, and Chrome ignores the
-    // notification `sound:` property entirely.
+    // Tell all active clients (including the Android WebView bridge) to:
+    //   1. Play the alarm sound (MARS_PLAY_SOUND)
+    //   2. Show the in-page overlay immediately (MARS_SHOW_ALARM_OVERLAY)
+    //      so the user sees the dismiss/snooze UI without tapping the notification.
+    // This is the only reliable path when the screen is off on Android —
+    // the Web Audio API is blocked when the page is hidden.
     const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     allClients.forEach(client => {
       client.postMessage({
@@ -627,14 +629,26 @@ function scheduleAlarmTimer(alarm_id, fire_at, payload) {
         loop: true,
         alarm_id,
       });
+      // FIX: send overlay trigger so useAlarmTimer shows the in-page overlay
+      // immediately when the alarm fires, without requiring a notification tap.
+      client.postMessage({
+        type: 'MARS_SHOW_ALARM_OVERLAY',
+        alarm_id,
+        label:   payload.label || payload.title || 'MARS Alarm',
+        time:    payload.time  || '',
+        sound:   alarmSound,
+        snooze_minutes: payload.snoozeMinutes || payload.snooze_minutes || 5,
+      });
     });
-    // Fire the notification
+    // Fire the notification (shown in notification tray for background/screen-off case)
+    // silent: false + strong vibration pattern wakes the screen on Android Chrome
     await self.registration.showNotification(payload.label || payload.title || 'MARS Alarm', {
       body: payload.body || 'Time to start your routine.',
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-72.png',
       sound: alarmSoundUrl,
-      vibrate: [300, 100, 300, 100, 500],
+      silent: false,
+      vibrate: [500, 200, 500, 200, 800, 200, 500],
       requireInteraction: true,
       data: { alarm_id, ...payload },
       tag: alarm_id,

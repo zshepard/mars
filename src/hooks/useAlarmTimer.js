@@ -266,6 +266,37 @@ export function useAlarmTimer(alarms = [], { onAlarmFired } = {}) {
     return () => clearAutoDismiss();
   }, [clearAutoDismiss]);
 
+  // ── SW message listener: show overlay when SW fires alarm in background ──
+  // The SW timer fires precisely via setTimeout even when the tab is hidden.
+  // When it fires, it sends MARS_SHOW_ALARM_OVERLAY to all clients. We listen
+  // here and immediately show the in-page overlay + play sound, so the user
+  // sees the alarm UI as soon as they look at the screen — without needing
+  // to tap the notification.
+  useEffect(() => {
+    const alarmsRef = { current: alarms };
+    alarmsRef.current = alarms;
+
+    const onSwMessage = (event) => {
+      const { type, alarm_id } = event.data || {};
+      if (type === 'MARS_SHOW_ALARM_OVERLAY' && alarm_id) {
+        const alarm = alarmsRef.current.find(a => a.id === alarm_id);
+        if (alarm) {
+          // Close the SW notification so it doesn't stack on the overlay
+          navigator.serviceWorker?.ready.then((reg) => {
+            reg.getNotifications({ tag: alarm_id }).then((notifs) => {
+              notifs.forEach((n) => n.close());
+            }).catch(() => {});
+          }).catch(() => {});
+          setFiringAlarm((current) => current ?? alarm);
+          // Play sound via the fire function (handles bridge + web audio)
+          fireAlarmFn(alarm);
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', onSwMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
+  }, [alarms, fireAlarmFn]);
+
   // ── Visibility change: when user brings the app back into view ────
   // If a SW notification fired while the page was hidden and the user taps
   // the notification to open the app, close the notification and show the
