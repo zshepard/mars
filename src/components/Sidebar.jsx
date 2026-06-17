@@ -12,6 +12,7 @@ export default function Sidebar({ open, onClose, alarms = [], routines = [] }) {
     { to: '/',         icon: myDayIcon,          label: 'My Day'         },
     { to: '/alarms',   icon: 'ti-alarm',          label: 'Alarms & Links' },
     { to: '/voice',    icon: 'ti-microphone',     label: 'Voice'          },
+    { to: '/health',   icon: 'ti-brain',           label: 'Health Agent'   },
     { to: '/settings', icon: 'ti-settings',       label: 'Settings'       },
   ];
 

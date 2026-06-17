@@ -24,7 +24,8 @@ import PullToRefresh                                   from './components/PullTo
 import RoutinePlayer                                   from './components/RoutinePlayer';
 import Onboarding                                      from './components/Onboarding';
 import WhatsNew                                        from './components/WhatsNew';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary   from './components/ErrorBoundary';
+import HealthAgent    from './pages/HealthAgent';
 import './styles/global.css';
 import './App.css';
 
@@ -154,9 +155,9 @@ function AppShell() {
             <Route path="/links"     element={<Navigate to="/alarms" replace />} />
             <Route path="/routines"  element={<Navigate to="/alarms" replace />} />
             <Route path="/home"      element={<Navigate to="/settings" replace />} />
-            <Route path="/health"    element={<Navigate to="/settings" replace />} />
+            <Route path="/health"    element={<HealthAgent />} />
             <Route path="/voice"     element={<Voice />}       />
-            <Route path="/ai"        element={<Navigate to="/settings" replace />} />
+            <Route path="/ai"        element={<HealthAgent />} />
             <Route path="/platforms" element={<Platforms />}   />
             <Route path="/settings"    element={<Settings />}        />
             <Route path="/backgrounds" element={<BackgroundPacks />}  />

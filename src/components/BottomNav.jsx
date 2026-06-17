@@ -12,6 +12,7 @@ export default function BottomNav({ alarms = [], routines = [] }) {
   const PRIMARY_TABS = [
     { to: '/',         icon: myDayIcon,          label: 'My Day'   },
     { to: '/alarms',   icon: 'ti-alarm',          label: 'Alarms'   },
+    { to: '/health',   icon: 'ti-brain',           label: 'AI'       },
     { to: '/voice',    icon: 'ti-microphone',     label: 'Voice'    },
     { to: '/settings', icon: 'ti-settings',       label: 'Settings' },
   ];
