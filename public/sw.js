@@ -4,7 +4,7 @@
 //           voice command cache, offline home control queue
 // ═══════════════════════════════════════════════════════════════
 
-const MARS_VERSION  = 'mars-v1.6.2'; // fix: 2s early-fire compensation for SW startup latency
+const MARS_VERSION  = 'mars-v1.7.0'; // fix: force cache bust — clears old 4-tab nav, loads AI Health Agent tab
 const STATIC_CACHE  = `${MARS_VERSION}-static`;
 const DYNAMIC_CACHE = `${MARS_VERSION}-dynamic`;
 const ALARM_CACHE   = `${MARS_VERSION}-alarms`;
